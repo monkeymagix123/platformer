@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#101b2e" />
+    <meta name="description" content="Skybound — a precision platformer built with PixiJS and TypeScript." />
+    <title>Skybound</title>
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <a class="brand" href="#" aria-label="Skybound home"><span class="brand-mark" aria-hidden="true"></span><span>SKYBOUND</span></a>
+        <div class="top-actions">
+          <button class="icon-button" id="sound-button" aria-label="Toggle sound" title="Toggle sound"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6.5 9H3v6h3.5l4.5 4V5Zm4.3 3.2a5.3 5.3 0 0 1 0 7.6M18 5.5a9 9 0 0 1 0 13"/></svg></button>
+          <button class="icon-button" id="settings-button" aria-label="Open settings" title="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="m19.4 15 .1.1 1.2 2-2.6 2.6-2-1.2-.1-.1a8 8 0 0 1-2 .8V22h-4v-2.8a8 8 0 0 1-2-.8l-.1.1-2 1.2-2.6-2.6 1.2-2 .1-.1a8 8 0 0 1-.8-2H1v-4h2.8a8 8 0 0 1 .8-2l-.1-.1-1.2-2 2.6-2.6 2 1.2.1.1a8 8 0 0 1 2-.8V2h4v2.8a8 8 0 0 1 2 .8l.1-.1 2-1.2 2.6 2.6-1.2 2-.1.1a8 8 0 0 1 .8 2H23v4h-2.8a8 8 0 0 1-.8 2Z"/></svg></button>
+        </div>
+      </header>
+
+      <section class="game-card" aria-label="Skybound game">
+        <div id="game-container"></div>
+        <div class="hud">
+          <div class="hud-group"><div class="eyebrow">SECTOR</div><div class="hud-value"><span>01</span><span class="hud-muted"> / 01</span></div></div>
+          <div class="hud-group hud-center"><div class="eyebrow">SHARDS</div><div class="hud-value shard-value"><span class="shard-icon"></span><span id="coin-count">0</span><span class="hud-muted"> / 12</span></div></div>
+          <div class="hud-group hud-right"><div class="eyebrow">BEST TIME</div><div class="hud-value" id="best-time">--:--.--</div></div>
+        </div>
+        <div class="start-overlay" id="start-overlay"><div class="start-panel">
+          <div class="micro-label">TRANSMISSION 01</div><h1>THE<br><em>FIRST</em> ASCENT</h1>
+          <p>Cross the fractured skyline. Gather all signal shards. Reach the beacon.</p>
+          <button class="primary-button" id="start-button"><span>BEGIN ASCENT</span><span>↗</span></button>
+          <div class="control-hint"><span><kbd>A</kbd><kbd>D</kbd> MOVE</span><span><kbd>SPACE</kbd> JUMP</span><span><kbd>R</kbd> RESTART</span></div>
+        </div></div>
+        <div class="finish-overlay hidden" id="finish-overlay"><div class="finish-panel">
+          <div class="micro-label">BEACON REACHED</div><h2>ASCENT<br>COMPLETE</h2>
+          <div class="results"><span>TIME <b id="finish-time">00:00.00</b></span><span>SHARDS <b id="finish-coins">0 / 12</b></span></div>
+          <button class="primary-button" id="replay-button"><span>RUN AGAIN</span><span>↻</span></button>
+        </div></div>
+        <div class="mobile-controls" aria-label="Touch controls"><div class="touch-pair"><button data-key="left" aria-label="Move left">←</button><button data-key="right" aria-label="Move right">→</button></div><button class="jump-button" data-key="jump" aria-label="Jump">↑</button></div>
+      </section>
+      <footer class="game-footer"><p><span class="status-dot"></span> SIGNAL STABLE</p><p>PIXEL SYSTEMS // BUILD 01</p></footer>
+    </main>
+    <aside class="settings-drawer" id="settings-drawer" aria-hidden="true">
+      <div class="drawer-head"><div><span class="micro-label">RUN CONFIGURATION</span><h2>ABILITIES</h2></div><button id="close-settings" aria-label="Close settings">×</button></div>
+      <p class="drawer-copy">Tune movement modules for this run. These will become unlockable skills as progression expands.</p>
+      <label class="setting-row"><span><b>AIR JUMP</b><small>Jump once more while airborne</small></span><input type="checkbox" id="air-jump-toggle" checked /><i></i></label>
+      <label class="setting-row"><span><b>WALL JUMP</b><small>Slide and launch from vertical surfaces</small></span><input type="checkbox" id="wall-jump-toggle" checked /><i></i></label>
+      <div class="drawer-note"><span>UP NEXT</span><p>Level editor and JSON import/export are planned for the next build.</p></div>
+    </aside>
+    <div class="drawer-scrim" id="drawer-scrim"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
