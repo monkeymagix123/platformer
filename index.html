@@ -12,6 +12,7 @@
       <header class="topbar">
         <a class="brand" href="#" aria-label="Skybound home"><span class="brand-mark" aria-hidden="true"></span><span>SKYBOUND</span></a>
         <div class="top-actions">
+          <button class="editor-launch" id="editor-button"><span>＋</span> LEVEL EDITOR</button>
           <button class="icon-button" id="sound-button" aria-label="Toggle sound" title="Toggle sound"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6.5 9H3v6h3.5l4.5 4V5Zm4.3 3.2a5.3 5.3 0 0 1 0 7.6M18 5.5a9 9 0 0 1 0 13"/></svg></button>
           <button class="icon-button" id="settings-button" aria-label="Open settings" title="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="m19.4 15 .1.1 1.2 2-2.6 2.6-2-1.2-.1-.1a8 8 0 0 1-2 .8V22h-4v-2.8a8 8 0 0 1-2-.8l-.1.1-2 1.2-2.6-2.6 1.2-2 .1-.1a8 8 0 0 1-.8-2H1v-4h2.8a8 8 0 0 1 .8-2l-.1-.1-1.2-2 2.6-2.6 2 1.2.1.1a8 8 0 0 1 2-.8V2h4v2.8a8 8 0 0 1 2 .8l.1-.1 2-1.2 2.6 2.6-1.2 2-.1.1a8 8 0 0 1 .8 2H23v4h-2.8a8 8 0 0 1-.8 2Z"/></svg></button>
         </div>
@@ -21,7 +22,7 @@
         <div id="game-container"></div>
         <div class="hud">
           <div class="hud-group"><div class="eyebrow">SECTOR</div><div class="hud-value"><span>01</span><span class="hud-muted"> / 01</span></div></div>
-          <div class="hud-group hud-center"><div class="eyebrow">SHARDS</div><div class="hud-value shard-value"><span class="shard-icon"></span><span id="coin-count">0</span><span class="hud-muted"> / 12</span></div></div>
+          <div class="hud-group hud-center"><div class="eyebrow">SHARDS</div><div class="hud-value shard-value"><span class="shard-icon"></span><span id="coin-count">0</span><span class="hud-muted"> / <span id="shard-total">12</span></span></div></div>
           <div class="hud-group hud-right"><div class="eyebrow">BEST TIME</div><div class="hud-value" id="best-time">--:--.--</div></div>
         </div>
         <div class="start-overlay" id="start-overlay"><div class="start-panel">
@@ -44,9 +45,62 @@
       <p class="drawer-copy">Tune movement modules for this run. These will become unlockable skills as progression expands.</p>
       <label class="setting-row"><span><b>AIR JUMP</b><small>Jump once more while airborne</small></span><input type="checkbox" id="air-jump-toggle" checked /><i></i></label>
       <label class="setting-row"><span><b>WALL JUMP</b><small>Slide and launch from vertical surfaces</small></span><input type="checkbox" id="wall-jump-toggle" checked /><i></i></label>
-      <div class="drawer-note"><span>UP NEXT</span><p>Level editor and JSON import/export are planned for the next build.</p></div>
+      <div class="drawer-note"><span>LEVEL LAB</span><p>Build and share custom sectors with the level editor.</p></div>
     </aside>
     <div class="drawer-scrim" id="drawer-scrim"></div>
+
+    <section class="editor-modal" id="editor-modal" aria-hidden="true">
+      <header class="editor-header">
+        <div>
+          <span class="micro-label">SKYBOUND // LEVEL LAB</span>
+          <input id="level-name" class="level-name" value="The First Ascent" aria-label="Level name" />
+        </div>
+        <div class="editor-header-actions">
+          <button class="editor-secondary" id="editor-undo">↶ UNDO</button>
+          <button class="editor-secondary" id="editor-reset">RESET</button>
+          <button class="editor-primary" id="editor-play">▶ PLAY TEST</button>
+          <button class="editor-close" id="close-editor" aria-label="Close editor">×</button>
+        </div>
+      </header>
+
+      <div class="editor-workspace">
+        <aside class="editor-tools">
+          <div class="editor-section-label">BUILD TOOLS</div>
+          <button class="tool-button active" data-editor-tool="platform"><i class="tool-swatch platform"></i><span>PLATFORM<small>Drag to draw</small></span></button>
+          <button class="tool-button" data-editor-tool="hazard"><i class="tool-swatch hazard"></i><span>HAZARD<small>Drag to draw</small></span></button>
+          <button class="tool-button" data-editor-tool="shard"><i class="tool-swatch shard"></i><span>SHARD<small>Click to place</small></span></button>
+          <button class="tool-button" data-editor-tool="spawn"><i class="tool-swatch spawn"></i><span>SPAWN<small>Click to move</small></span></button>
+          <button class="tool-button" data-editor-tool="finish"><i class="tool-swatch finish"></i><span>FINISH<small>Click to move</small></span></button>
+          <button class="tool-button" data-editor-tool="erase"><i class="tool-swatch erase">×</i><span>ERASER<small>Click an object</small></span></button>
+          <button class="editor-danger" id="editor-clear">CLEAR CANVAS</button>
+        </aside>
+
+        <div class="editor-canvas-wrap">
+          <canvas id="editor-canvas"></canvas>
+          <div class="editor-canvas-meta">
+            <span>GRID 20 PX</span>
+            <span><b id="platform-count">0</b> PLATFORMS</span>
+            <span><b id="hazard-count">0</b> HAZARDS</span>
+            <span><b id="shard-count">0</b> SHARDS</span>
+          </div>
+        </div>
+
+        <aside class="editor-data">
+          <div class="editor-section-label">IMPORT / EXPORT</div>
+          <p>Paste either readable JSON or a compact Base64 level code.</p>
+          <textarea id="level-data" spellcheck="false" placeholder="Level data appears here…"></textarea>
+          <div class="editor-data-grid">
+            <button id="export-json">EXPORT JSON</button>
+            <button id="export-base64">EXPORT BASE64</button>
+            <button id="copy-level">COPY</button>
+            <button id="download-level">DOWNLOAD</button>
+          </div>
+          <button class="editor-import" id="import-level">IMPORT FROM TEXT</button>
+          <label class="editor-file">IMPORT JSON FILE<input id="level-file" type="file" accept="application/json,.json" /></label>
+          <p class="editor-message" id="editor-message" aria-live="polite">Ready to build.</p>
+        </aside>
+      </div>
+    </section>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

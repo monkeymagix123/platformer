@@ -1,20 +1,19 @@
 import { Application, Container, Graphics } from 'pixi.js';
 import { SoundEffects } from './audio';
 import {
-  FINISH_AREA,
-  HAZARDS,
+  DEFAULT_LEVEL,
+  LevelDefinition,
   PLAYER,
-  PLATFORMS,
   Rectangle,
-  SHARD_POSITIONS,
-  WORLD,
 } from './config';
+import { LevelEditor } from './editor';
 import {
   createBackground,
   createPlayer,
   createShard,
   createTerrain,
 } from './graphics';
+import { cloneLevel } from './level-format';
 import './styles.css';
 
 type PlayerState = {
@@ -59,6 +58,8 @@ class PlatformerGame {
   private readonly objects = new Container();
   private readonly playerGraphics = createPlayer();
   private readonly shards: Shard[] = [];
+  private terrain = createTerrain();
+  private level = cloneLevel(DEFAULT_LEVEL);
 
   private readonly state: PlayerState = {
     x: PLAYER.spawn.x,
@@ -88,6 +89,7 @@ class PlatformerGame {
   };
 
   private cameraX = 0;
+  private pausedAt: number | null = null;
 
   async initialize(host: HTMLDivElement): Promise<void> {
     await this.app.init({
@@ -100,7 +102,7 @@ class PlatformerGame {
 
     host.appendChild(this.app.canvas);
     this.app.stage.addChild(this.world);
-    this.world.addChild(this.background, createTerrain(), this.objects);
+    this.world.addChild(this.background, this.terrain, this.objects);
 
     this.createShards();
     this.objects.addChild(this.playerGraphics.container);
@@ -114,8 +116,57 @@ class PlatformerGame {
     this.render(0);
   }
 
+  getLevel(): LevelDefinition {
+    return cloneLevel(this.level);
+  }
+
+  pause(): boolean {
+    const wasRunning = this.state.running;
+    if (wasRunning) this.pausedAt = performance.now();
+    this.state.running = false;
+    return wasRunning;
+  }
+
+  resume(): void {
+    if (this.state.running || this.state.finished) {
+      this.pausedAt = null;
+      return;
+    }
+
+    if (this.pausedAt !== null) {
+      this.state.startTime += performance.now() - this.pausedAt;
+    }
+    this.pausedAt = null;
+    this.state.running = true;
+  }
+
+  playLevel(level: LevelDefinition): void {
+    this.level = cloneLevel(level);
+    this.rebuildLevelGraphics();
+    select('#start-overlay').classList.add('hidden');
+    this.startRun();
+  }
+
+  private rebuildLevelGraphics(): void {
+    this.world.removeChild(this.terrain);
+    this.terrain.destroy({ children: true });
+    this.terrain = createTerrain(
+      this.level.platforms,
+      this.level.hazards,
+      this.level.finish,
+    );
+    this.world.addChildAt(this.terrain, 1);
+
+    this.objects.removeChildren();
+    this.shards.length = 0;
+    this.createShards();
+    this.objects.addChild(this.playerGraphics.container);
+
+    setText('#shard-total', String(this.level.shards.length));
+  }
+
   private createShards(): void {
-    for (const position of SHARD_POSITIONS) {
+    for (const position of this.level.shards) {
       const sprite = createShard();
       sprite.position.set(position.x, position.y);
       this.objects.addChild(sprite);
@@ -188,7 +239,7 @@ class PlatformerGame {
     this.state.x += this.state.velocityX * deltaTime;
     this.state.wallDirection = 0;
 
-    for (const platform of PLATFORMS) {
+    for (const platform of this.level.platforms) {
       if (!rectanglesOverlap(this.playerBounds(), platform)) continue;
 
       if (this.state.velocityX > 0) {
@@ -214,7 +265,7 @@ class PlatformerGame {
     this.state.y += this.state.velocityY * deltaTime;
     this.state.onGround = false;
 
-    for (const platform of PLATFORMS) {
+    for (const platform of this.level.platforms) {
       if (!rectanglesOverlap(this.playerBounds(), platform)) continue;
 
       if (this.state.velocityY > 0) {
@@ -255,10 +306,14 @@ class PlatformerGame {
 
   private checkWorldBounds(): void {
     const halfWidth = PLAYER.width / 2;
-    this.state.x = clamp(this.state.x, halfWidth, WORLD.width - halfWidth);
+    this.state.x = clamp(
+      this.state.x,
+      halfWidth,
+      this.level.world.width - halfWidth,
+    );
 
-    const fellOutOfWorld = this.state.y > WORLD.height + 80;
-    const touchedHazard = HAZARDS.some((hazard) =>
+    const fellOutOfWorld = this.state.y > this.level.world.height + 80;
+    const touchedHazard = this.level.hazards.some((hazard) =>
       rectanglesOverlap(this.playerBounds(), hazard),
     );
 
@@ -287,7 +342,7 @@ class PlatformerGame {
   private checkForFinish(): void {
     if (
       !this.state.finished &&
-      rectanglesOverlap(this.playerBounds(), FINISH_AREA)
+      rectanglesOverlap(this.playerBounds(), this.level.finish)
     ) {
       this.finishRun();
     }
@@ -343,8 +398,8 @@ class PlatformerGame {
   }
 
   private respawn(): void {
-    this.state.x = PLAYER.spawn.x;
-    this.state.y = PLAYER.spawn.y;
+    this.state.x = this.level.spawn.x;
+    this.state.y = this.level.spawn.y;
     this.state.velocityX = 0;
     this.state.velocityY = 0;
     this.state.jumpsUsed = 0;
@@ -352,7 +407,7 @@ class PlatformerGame {
 
   private render(deltaTime: number): void {
     const scale = clamp(
-      (this.app.screen.height / WORLD.height) * 1.05,
+      (this.app.screen.height / this.level.world.height) * 1.05,
       0.72,
       1.12,
     );
@@ -360,7 +415,7 @@ class PlatformerGame {
     const targetCameraX = clamp(
       this.state.x - visibleWorldWidth * 0.38,
       0,
-      WORLD.width - visibleWorldWidth,
+      this.level.world.width - visibleWorldWidth,
     );
 
     this.cameraX +=
@@ -368,7 +423,8 @@ class PlatformerGame {
 
     this.world.scale.set(scale);
     this.world.x = -this.cameraX * scale;
-    this.world.y = (this.app.screen.height - WORLD.height * scale) / 2;
+    this.world.y =
+      (this.app.screen.height - this.level.world.height * scale) / 2;
     this.background.x = this.cameraX * 0.12;
 
     const player = this.playerGraphics.container;
@@ -534,6 +590,19 @@ async function main(): Promise<void> {
 
   const game = new PlatformerGame();
   await game.initialize(host);
+
+  let resumeAfterEditor = false;
+  const editor = new LevelEditor(
+    (level) => game.playLevel(level),
+    () => {
+      if (resumeAfterEditor) game.resume();
+      resumeAfterEditor = false;
+    },
+  );
+  select('#editor-button').addEventListener('click', () => {
+    resumeAfterEditor = game.pause();
+    editor.open(game.getLevel());
+  });
 }
 
 void main();

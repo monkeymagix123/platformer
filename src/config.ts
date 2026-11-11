@@ -8,6 +8,20 @@ export type Rectangle = Point & {
   height: number;
 };
 
+export type LevelDefinition = {
+  version: 1;
+  name: string;
+  world: {
+    width: number;
+    height: number;
+  };
+  spawn: Point;
+  finish: Rectangle;
+  platforms: Rectangle[];
+  hazards: Rectangle[];
+  shards: Point[];
+};
+
 export const WORLD = {
   width: 3_000,
   height: 900,
@@ -84,6 +98,17 @@ export const SHARD_POSITIONS: Point[] = [
   { x: 2_250, y: 395 },
   { x: 2_520, y: 305 },
 ];
+
+export const DEFAULT_LEVEL: LevelDefinition = {
+  version: 1,
+  name: 'The First Ascent',
+  world: { width: WORLD.width, height: WORLD.height },
+  spawn: { ...PLAYER.spawn },
+  finish: { ...FINISH_AREA },
+  platforms: PLATFORMS.map((platform) => ({ ...platform })),
+  hazards: HAZARDS.map((hazard) => ({ ...hazard })),
+  shards: SHARD_POSITIONS.map((shard) => ({ ...shard })),
+};
 
 export const COLORS = {
   sky: 0x12243b,

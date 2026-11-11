@@ -1,5 +1,12 @@
 import { Container, Graphics, Text, TextStyle } from 'pixi.js';
-import { COLORS, HAZARDS, PLATFORMS, WORLD } from './config';
+import {
+  COLORS,
+  FINISH_AREA,
+  HAZARDS,
+  PLATFORMS,
+  Rectangle,
+  WORLD,
+} from './config';
 
 export function createBackground(): Container {
   const background = new Container();
@@ -67,10 +74,14 @@ function addSkyline(background: Container): void {
   }
 }
 
-export function createTerrain(): Container {
+export function createTerrain(
+  platforms: Rectangle[] = PLATFORMS,
+  hazards: Rectangle[] = HAZARDS,
+  finish: Rectangle = FINISH_AREA,
+): Container {
   const terrain = new Container();
 
-  PLATFORMS.forEach((platform, index) => {
+  platforms.forEach((platform, index) => {
     const isGroundPlatform = index < 9;
     const color = isGroundPlatform ? COLORS.block : COLORS.platform;
     const block = new Graphics()
@@ -83,8 +94,8 @@ export function createTerrain(): Container {
     terrain.addChild(block);
   });
 
-  HAZARDS.forEach((hazard) => terrain.addChild(createSpikes(hazard)));
-  terrain.addChild(createBeacon());
+  hazards.forEach((hazard) => terrain.addChild(createSpikes(hazard)));
+  terrain.addChild(createBeacon(finish));
 
   return terrain;
 }
@@ -109,14 +120,17 @@ function createSpikes(hazard: (typeof HAZARDS)[number]): Graphics {
   return spikes;
 }
 
-function createBeacon(): Container {
+function createBeacon(finish: Rectangle): Container {
   const beacon = new Container();
+  const centerX = finish.x + finish.width / 2;
+  const baseY = finish.y + finish.height;
+  const topY = finish.y + 25;
   const shape = new Graphics()
-    .rect(2_850, 570, 8, 120)
+    .rect(centerX - 4, topY + 45, 8, Math.max(60, baseY - topY - 45))
     .fill(COLORS.acid)
-    .poly([2_815, 570, 2_854, 525, 2_893, 570])
+    .poly([finish.x, topY + 45, centerX, topY, finish.x + finish.width, topY + 45])
     .stroke({ color: COLORS.acid, width: 4 })
-    .circle(2_854, 565, 62)
+    .circle(centerX, topY + 40, Math.max(36, finish.width * 0.62))
     .stroke({ color: COLORS.acid, width: 1, alpha: 0.3 });
 
   const sign = new Text({
@@ -128,7 +142,7 @@ function createBeacon(): Container {
       letterSpacing: 2,
     }),
   });
-  sign.position.set(2_660, 650);
+  sign.position.set(finish.x - 155, baseY - 40);
 
   beacon.addChild(shape, sign);
   return beacon;
