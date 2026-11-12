@@ -1,4 +1,12 @@
-import { DEFAULT_LEVEL, LevelDefinition, Point, Rectangle } from './config';
+import {
+  ArrowTrap,
+  CrumblePlatform,
+  DEFAULT_LEVEL,
+  LevelDefinition,
+  MovingPlatform,
+  Point,
+  Rectangle,
+} from './config';
 
 export function cloneLevel(level: LevelDefinition): LevelDefinition {
   return JSON.parse(JSON.stringify(level)) as LevelDefinition;
@@ -55,6 +63,15 @@ export function validateLevel(value: unknown): LevelDefinition {
     shards: readArray(value.shards, 'shards').map((item, index) =>
       readPoint(item, `shards[${index}]`, world),
     ),
+    movingPlatforms: readOptionalArray(value.movingPlatforms).map((item, index) =>
+      readMovingPlatform(item, `movingPlatforms[${index}]`, world),
+    ),
+    crumblePlatforms: readOptionalArray(value.crumblePlatforms).map((item, index) =>
+      readCrumblePlatform(item, `crumblePlatforms[${index}]`, world),
+    ),
+    arrowTraps: readOptionalArray(value.arrowTraps).map((item, index) =>
+      readArrowTrap(item, `arrowTraps[${index}]`, world),
+    ),
   };
 
   if (level.platforms.length === 0) {
@@ -62,6 +79,53 @@ export function validateLevel(value: unknown): LevelDefinition {
   }
 
   return level;
+}
+
+function readMovingPlatform(
+  value: unknown,
+  label: string,
+  world: LevelDefinition['world'],
+): MovingPlatform {
+  const rectangle = readRectangle(value, label, world);
+  if (!isRecord(value)) throw new Error(`${label} must be an object.`);
+
+  return {
+    ...rectangle,
+    axis: value.axis === 'y' ? 'y' : 'x',
+    distance: clamp(readNumber(value.distance, `${label}.distance`), 20, 2_000),
+    speed: clamp(readDecimal(value.speed, `${label}.speed`), 0.1, 5),
+  };
+}
+
+function readCrumblePlatform(
+  value: unknown,
+  label: string,
+  world: LevelDefinition['world'],
+): CrumblePlatform {
+  const rectangle = readRectangle(value, label, world);
+  if (!isRecord(value)) throw new Error(`${label} must be an object.`);
+
+  return {
+    ...rectangle,
+    delay: clamp(readDecimal(value.delay, `${label}.delay`), 0.1, 10),
+    respawn: clamp(readDecimal(value.respawn, `${label}.respawn`), 0.2, 30),
+  };
+}
+
+function readArrowTrap(
+  value: unknown,
+  label: string,
+  world: LevelDefinition['world'],
+): ArrowTrap {
+  const point = readPoint(value, label, world);
+  if (!isRecord(value)) throw new Error(`${label} must be an object.`);
+
+  return {
+    ...point,
+    direction: value.direction === 'left' ? 'left' : 'right',
+    interval: clamp(readDecimal(value.interval, `${label}.interval`), 0.25, 20),
+    speed: clamp(readNumber(value.speed, `${label}.speed`), 80, 1_500),
+  };
 }
 
 function readWorld(value: unknown): LevelDefinition['world'] {
@@ -106,11 +170,22 @@ function readArray(value: unknown, label: string): unknown[] {
   return value;
 }
 
+function readOptionalArray(value: unknown): unknown[] {
+  return value === undefined ? [] : readArray(value, 'mechanic');
+}
+
 function readNumber(value: unknown, label: string): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
     throw new Error(`${label} must be a finite number.`);
   }
   return Math.round(value);
+}
+
+function readDecimal(value: unknown, label: string): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    throw new Error(`${label} must be a finite number.`);
+  }
+  return value;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

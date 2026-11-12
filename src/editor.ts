@@ -6,7 +6,18 @@ import {
   importLevel,
 } from './level-format';
 
-type EditorTool = 'platform' | 'hazard' | 'shard' | 'spawn' | 'finish' | 'erase';
+type EditorTool =
+  | 'platform'
+  | 'hazard'
+  | 'moving-x'
+  | 'moving-y'
+  | 'crumble'
+  | 'arrow-left'
+  | 'arrow-right'
+  | 'shard'
+  | 'spawn'
+  | 'finish'
+  | 'erase';
 
 const GRID_SIZE = 20;
 
@@ -95,7 +106,13 @@ export class LevelEditor {
   private pointerDown(event: PointerEvent): void {
     const point = this.eventToWorld(event);
 
-    if (this.tool === 'platform' || this.tool === 'hazard') {
+    if (
+      this.tool === 'platform' ||
+      this.tool === 'hazard' ||
+      this.tool === 'moving-x' ||
+      this.tool === 'moving-y' ||
+      this.tool === 'crumble'
+    ) {
       this.dragStart = point;
       this.dragEnd = point;
       this.canvas.setPointerCapture(event.pointerId);
@@ -120,6 +137,15 @@ export class LevelEditor {
           height: 200,
         };
         break;
+      case 'arrow-left':
+      case 'arrow-right':
+        this.level.arrowTraps.push({
+          ...point,
+          direction: this.tool === 'arrow-left' ? 'left' : 'right',
+          interval: 1.8,
+          speed: 420,
+        });
+        break;
       case 'erase':
         this.eraseAt(point);
         break;
@@ -143,6 +169,21 @@ export class LevelEditor {
 
     if (this.tool === 'platform') this.level.platforms.push(rectangle);
     if (this.tool === 'hazard') this.level.hazards.push(rectangle);
+    if (this.tool === 'moving-x' || this.tool === 'moving-y') {
+      this.level.movingPlatforms.push({
+        ...rectangle,
+        axis: this.tool === 'moving-x' ? 'x' : 'y',
+        distance: 200,
+        speed: 1,
+      });
+    }
+    if (this.tool === 'crumble') {
+      this.level.crumblePlatforms.push({
+        ...rectangle,
+        delay: 0.7,
+        respawn: 2.5,
+      });
+    }
 
     this.cancelDrag();
     this.render();
@@ -154,6 +195,18 @@ export class LevelEditor {
   }
 
   private eraseAt(point: Point): void {
+    const movingIndex = findRectangleAt(this.level.movingPlatforms, point);
+    if (movingIndex >= 0) {
+      this.level.movingPlatforms.splice(movingIndex, 1);
+      return;
+    }
+
+    const crumbleIndex = findRectangleAt(this.level.crumblePlatforms, point);
+    if (crumbleIndex >= 0) {
+      this.level.crumblePlatforms.splice(crumbleIndex, 1);
+      return;
+    }
+
     const platformIndex = findRectangleAt(this.level.platforms, point);
     if (platformIndex >= 0) {
       this.level.platforms.splice(platformIndex, 1);
@@ -169,7 +222,15 @@ export class LevelEditor {
     const shardIndex = this.level.shards.findIndex(
       (shard) => Math.hypot(shard.x - point.x, shard.y - point.y) < 35,
     );
-    if (shardIndex >= 0) this.level.shards.splice(shardIndex, 1);
+    if (shardIndex >= 0) {
+      this.level.shards.splice(shardIndex, 1);
+      return;
+    }
+
+    const trapIndex = this.level.arrowTraps.findIndex(
+      (trap) => Math.hypot(trap.x - point.x, trap.y - point.y) < 40,
+    );
+    if (trapIndex >= 0) this.level.arrowTraps.splice(trapIndex, 1);
   }
 
   private clearLevel(): void {
@@ -177,6 +238,9 @@ export class LevelEditor {
     this.level.platforms = [];
     this.level.hazards = [];
     this.level.shards = [];
+    this.level.movingPlatforms = [];
+    this.level.crumblePlatforms = [];
+    this.level.arrowTraps = [];
     this.render();
     this.showMessage('Canvas cleared. Add at least one platform before importing.');
   }
@@ -289,6 +353,16 @@ export class LevelEditor {
     this.level.hazards.forEach((item) =>
       drawRectangle(context, item, scaleX, scaleY, '#8d3d43', '#f06156'),
     );
+    this.level.movingPlatforms.forEach((item) => {
+      drawRectangle(context, item, scaleX, scaleY, '#315f78', '#71c6e8');
+      drawRail(context, item, scaleX, scaleY);
+    });
+    this.level.crumblePlatforms.forEach((item) =>
+      drawRectangle(context, item, scaleX, scaleY, '#73564f', '#d89779'),
+    );
+    this.level.arrowTraps.forEach((trap) =>
+      drawArrowTrap(context, trap, scaleX, scaleY),
+    );
     this.level.shards.forEach((point) =>
       drawDiamond(context, point, scaleX, scaleY, '#c9fa49'),
     );
@@ -315,6 +389,14 @@ export class LevelEditor {
     setText('#platform-count', String(this.level.platforms.length));
     setText('#hazard-count', String(this.level.hazards.length));
     setText('#shard-count', String(this.level.shards.length));
+    setText(
+      '#mechanic-count',
+      String(
+        this.level.movingPlatforms.length +
+        this.level.crumblePlatforms.length +
+        this.level.arrowTraps.length,
+      ),
+    );
   }
 
   private drawGrid(
@@ -385,6 +467,47 @@ function drawRectangle(
   context.lineWidth = 1;
   context.fillRect(item.x * scaleX, item.y * scaleY, item.width * scaleX, item.height * scaleY);
   context.strokeRect(item.x * scaleX, item.y * scaleY, item.width * scaleX, item.height * scaleY);
+}
+
+function drawRail(
+  context: CanvasRenderingContext2D,
+  item: LevelDefinition['movingPlatforms'][number],
+  scaleX: number,
+  scaleY: number,
+): void {
+  const startX = (item.x + item.width / 2) * scaleX;
+  const startY = (item.y + item.height / 2) * scaleY;
+  const endX = startX + (item.axis === 'x' ? item.distance * scaleX : 0);
+  const endY = startY + (item.axis === 'y' ? item.distance * scaleY : 0);
+
+  context.beginPath();
+  context.moveTo(startX, startY);
+  context.lineTo(endX, endY);
+  context.strokeStyle = '#71c6e8';
+  context.setLineDash([4, 4]);
+  context.stroke();
+  context.setLineDash([]);
+}
+
+function drawArrowTrap(
+  context: CanvasRenderingContext2D,
+  trap: LevelDefinition['arrowTraps'][number],
+  scaleX: number,
+  scaleY: number,
+): void {
+  const x = trap.x * scaleX;
+  const y = trap.y * scaleY;
+  const direction = trap.direction === 'right' ? 1 : -1;
+
+  context.fillStyle = '#6b3440';
+  context.fillRect(x - 6, y - 7, 12, 14);
+  context.beginPath();
+  context.moveTo(x - 3 * direction, y - 5);
+  context.lineTo(x + 9 * direction, y);
+  context.lineTo(x - 3 * direction, y + 5);
+  context.closePath();
+  context.fillStyle = '#f06156';
+  context.fill();
 }
 
 function drawDiamond(

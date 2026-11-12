@@ -8,6 +8,23 @@ export type Rectangle = Point & {
   height: number;
 };
 
+export type MovingPlatform = Rectangle & {
+  axis: 'x' | 'y';
+  distance: number;
+  speed: number;
+};
+
+export type CrumblePlatform = Rectangle & {
+  delay: number;
+  respawn: number;
+};
+
+export type ArrowTrap = Point & {
+  direction: 'left' | 'right';
+  interval: number;
+  speed: number;
+};
+
 export type LevelDefinition = {
   version: 1;
   name: string;
@@ -20,6 +37,9 @@ export type LevelDefinition = {
   platforms: Rectangle[];
   hazards: Rectangle[];
   shards: Point[];
+  movingPlatforms: MovingPlatform[];
+  crumblePlatforms: CrumblePlatform[];
+  arrowTraps: ArrowTrap[];
 };
 
 export const WORLD = {
@@ -108,6 +128,31 @@ export const DEFAULT_LEVEL: LevelDefinition = {
   platforms: PLATFORMS.map((platform) => ({ ...platform })),
   hazards: HAZARDS.map((hazard) => ({ ...hazard })),
   shards: SHARD_POSITIONS.map((shard) => ({ ...shard })),
+  movingPlatforms: [
+    {
+      x: 1_300,
+      y: 330,
+      width: 120,
+      height: 18,
+      axis: 'x',
+      distance: 180,
+      speed: 1.1,
+    },
+  ],
+  crumblePlatforms: [
+    {
+      x: 2_050,
+      y: 500,
+      width: 110,
+      height: 18,
+      delay: 0.7,
+      respawn: 2.5,
+    },
+  ],
+  arrowTraps: [
+    { x: 1_680, y: 485, direction: 'left', interval: 1.8, speed: 420 },
+    { x: 2_500, y: 650, direction: 'right', interval: 2.2, speed: 390 },
+  ],
 };
 
 export const COLORS = {

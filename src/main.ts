@@ -14,6 +14,7 @@ import {
   createTerrain,
 } from './graphics';
 import { cloneLevel } from './level-format';
+import { MechanicsSystem } from './mechanics';
 import './styles.css';
 
 type PlayerState = {
@@ -58,8 +59,9 @@ class PlatformerGame {
   private readonly objects = new Container();
   private readonly playerGraphics = createPlayer();
   private readonly shards: Shard[] = [];
-  private terrain = createTerrain();
   private level = cloneLevel(DEFAULT_LEVEL);
+  private terrain = createTerrain();
+  private mechanics = new MechanicsSystem(this.level);
 
   private readonly state: PlayerState = {
     x: PLAYER.spawn.x,
@@ -102,7 +104,12 @@ class PlatformerGame {
 
     host.appendChild(this.app.canvas);
     this.app.stage.addChild(this.world);
-    this.world.addChild(this.background, this.terrain, this.objects);
+    this.world.addChild(
+      this.background,
+      this.terrain,
+      this.mechanics.layer,
+      this.objects,
+    );
 
     this.createShards();
     this.objects.addChild(this.playerGraphics.container);
@@ -149,13 +156,17 @@ class PlatformerGame {
 
   private rebuildLevelGraphics(): void {
     this.world.removeChild(this.terrain);
+    this.world.removeChild(this.mechanics.layer);
     this.terrain.destroy({ children: true });
+    this.mechanics.destroy();
     this.terrain = createTerrain(
       this.level.platforms,
       this.level.hazards,
       this.level.finish,
     );
+    this.mechanics = new MechanicsSystem(this.level);
     this.world.addChildAt(this.terrain, 1);
+    this.world.addChildAt(this.mechanics.layer, 2);
 
     this.objects.removeChildren();
     this.shards.length = 0;
@@ -183,6 +194,7 @@ class PlatformerGame {
     const deltaTime = Math.min(unboundedDeltaTime, 0.032);
 
     if (this.state.running && !this.state.finished) {
+      this.mechanics.update(deltaTime);
       this.updatePhysics(deltaTime);
       this.state.elapsedTime = performance.now() - this.state.startTime;
     }
@@ -239,7 +251,7 @@ class PlatformerGame {
     this.state.x += this.state.velocityX * deltaTime;
     this.state.wallDirection = 0;
 
-    for (const platform of this.level.platforms) {
+    for (const platform of this.collisionPlatforms()) {
       if (!rectanglesOverlap(this.playerBounds(), platform)) continue;
 
       if (this.state.velocityX > 0) {
@@ -265,13 +277,16 @@ class PlatformerGame {
     this.state.y += this.state.velocityY * deltaTime;
     this.state.onGround = false;
 
-    for (const platform of this.level.platforms) {
+    for (const platform of this.collisionPlatforms()) {
       if (!rectanglesOverlap(this.playerBounds(), platform)) continue;
 
       if (this.state.velocityY > 0) {
         this.state.y = platform.y - PLAYER.height / 2;
         this.state.onGround = true;
         this.state.jumpsUsed = 0;
+        const carry = this.mechanics.landOn(platform);
+        this.state.x += carry.deltaX;
+        this.state.y += carry.deltaY;
       } else if (this.state.velocityY < 0) {
         this.state.y = platform.y + platform.height + PLAYER.height / 2;
       }
@@ -316,8 +331,9 @@ class PlatformerGame {
     const touchedHazard = this.level.hazards.some((hazard) =>
       rectanglesOverlap(this.playerBounds(), hazard),
     );
+    const hitByArrow = this.mechanics.arrowHits(this.playerBounds());
 
-    if (fellOutOfWorld || touchedHazard) this.respawn();
+    if (fellOutOfWorld || touchedHazard || hitByArrow) this.respawn();
   }
 
   private collectNearbyShards(): void {
@@ -382,6 +398,7 @@ class PlatformerGame {
 
   private resetRun(): void {
     this.respawn();
+    this.mechanics.reset();
     this.cameraX = 0;
     this.state.collectedShards = 0;
     this.state.finished = false;
@@ -449,6 +466,13 @@ class PlatformerGame {
       width: PLAYER.width,
       height: PLAYER.height,
     };
+  }
+
+  private collisionPlatforms(): Rectangle[] {
+    return [
+      ...this.level.platforms,
+      ...this.mechanics.getCollisionPlatforms(),
+    ];
   }
 
   private bindKeyboardControls(): void {

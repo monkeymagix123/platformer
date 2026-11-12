@@ -175,6 +175,9 @@
 }
 
 .tool-swatch.hazard { background: #8d3d43; border-color: #f06156; }
+.tool-swatch.moving { background: #315f78; border-color: #71c6e8; color: #bdeeff; }
+.tool-swatch.crumble { background: #73564f; border-color: #d89779; color: #f0bca5; }
+.tool-swatch.arrow { background: #6b3440; border-color: #f06156; color: #ffaaa3; }
 .tool-swatch.shard { width: 16px; height: 22px; margin: 0 6px; background: var(--acid); border: 0; clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
 .tool-swatch.spawn { border-radius: 50%; background: #70e0bf; border: 0; }
 .tool-swatch.finish { border-radius: 50%; background: var(--acid); border: 0; }
