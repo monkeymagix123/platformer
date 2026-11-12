@@ -128,22 +128,12 @@ export class MechanicsSystem {
 
       const centerX = definition.x + definition.width / 2;
       const centerY = definition.y + definition.height / 2;
+      const targetCenterX = definition.target.x + definition.width / 2;
+      const targetCenterY = definition.target.y + definition.height / 2;
       const guide = new Graphics();
-      if (definition.axis === 'x') {
-        guide
-          .moveTo(centerX, centerY)
-          .lineTo(
-            centerX + definition.distance,
-            centerY,
-          );
-      } else {
-        guide
-          .moveTo(centerX, centerY)
-          .lineTo(
-            centerX,
-            centerY + definition.distance,
-          );
-      }
+      guide
+        .moveTo(centerX, centerY)
+        .lineTo(targetCenterX, targetCenterY);
       guide.stroke({ color: 0x66849c, width: 1, alpha: 0.35 });
       this.layer.addChildAt(guide, 0);
 
@@ -209,9 +199,9 @@ export class MechanicsSystem {
       moving.time += deltaTime * moving.definition.speed;
       const progress = (1 - Math.cos(moving.time)) / 2;
       const nextX = moving.definition.x +
-        (moving.definition.axis === 'x' ? progress * moving.definition.distance : 0);
+        (moving.definition.target.x - moving.definition.x) * progress;
       const nextY = moving.definition.y +
-        (moving.definition.axis === 'y' ? progress * moving.definition.distance : 0);
+        (moving.definition.target.y - moving.definition.y) * progress;
 
       moving.deltaX = nextX - moving.bounds.x;
       moving.deltaY = nextY - moving.bounds.y;
@@ -255,7 +245,22 @@ export class MechanicsSystem {
       arrow.x += arrow.velocityX * deltaTime;
       arrow.sprite.x = arrow.x;
 
-      if (arrow.x < -50 || arrow.x > this.level.world.width + 50) {
+      const arrowBounds = {
+        x: arrow.x - 14,
+        y: arrow.y - 4,
+        width: 28,
+        height: 8,
+      };
+      const hitPlatform = [
+        ...this.level.platforms,
+        ...this.getCollisionPlatforms(),
+      ].some((platform) => overlaps(arrowBounds, platform));
+
+      if (
+        hitPlatform ||
+        arrow.x < -50 ||
+        arrow.x > this.level.world.width + 50
+      ) {
         arrow.sprite.destroy();
         this.arrows.splice(index, 1);
       }

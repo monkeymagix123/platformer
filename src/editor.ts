@@ -9,8 +9,7 @@ import {
 type EditorTool =
   | 'platform'
   | 'hazard'
-  | 'moving-x'
-  | 'moving-y'
+  | 'moving'
   | 'crumble'
   | 'arrow-left'
   | 'arrow-right'
@@ -27,6 +26,8 @@ export class LevelEditor {
   private tool: EditorTool = 'platform';
   private dragStart: Point | null = null;
   private dragEnd: Point | null = null;
+  private pendingMovingPlatform: Rectangle | null = null;
+  private pendingMovingTarget: Point | null = null;
 
   private readonly modal = select('#editor-modal');
   private readonly canvas = selectCanvas('#editor-canvas');
@@ -47,6 +48,8 @@ export class LevelEditor {
   open(level: LevelDefinition): void {
     this.level = cloneLevel(level);
     this.history = [];
+    this.pendingMovingPlatform = null;
+    this.pendingMovingTarget = null;
     this.nameInput.value = this.level.name;
     this.modal.classList.add('open');
     this.modal.setAttribute('aria-hidden', 'false');
@@ -66,6 +69,8 @@ export class LevelEditor {
     document.querySelectorAll<HTMLButtonElement>('[data-editor-tool]').forEach((button) => {
       button.addEventListener('click', () => {
         this.tool = button.dataset.editorTool as EditorTool;
+        this.pendingMovingPlatform = null;
+        this.pendingMovingTarget = null;
         document.querySelectorAll('[data-editor-tool]').forEach((item) =>
           item.classList.toggle('active', item === button),
         );
@@ -106,11 +111,24 @@ export class LevelEditor {
   private pointerDown(event: PointerEvent): void {
     const point = this.eventToWorld(event);
 
+    if (this.tool === 'moving' && this.pendingMovingPlatform) {
+      this.saveHistory();
+      this.level.movingPlatforms.push({
+        ...this.pendingMovingPlatform,
+        target: this.targetPosition(point, this.pendingMovingPlatform),
+        speed: 1,
+      });
+      this.pendingMovingPlatform = null;
+      this.pendingMovingTarget = null;
+      this.showMessage('Moving platform path created.');
+      this.render();
+      return;
+    }
+
     if (
       this.tool === 'platform' ||
       this.tool === 'hazard' ||
-      this.tool === 'moving-x' ||
-      this.tool === 'moving-y' ||
+      this.tool === 'moving' ||
       this.tool === 'crumble'
     ) {
       this.dragStart = point;
@@ -155,6 +173,15 @@ export class LevelEditor {
   }
 
   private pointerMove(event: PointerEvent): void {
+    if (this.tool === 'moving' && this.pendingMovingPlatform) {
+      this.pendingMovingTarget = this.targetPosition(
+        this.eventToWorld(event),
+        this.pendingMovingPlatform,
+      );
+      this.render();
+      return;
+    }
+
     if (!this.dragStart) return;
     this.dragEnd = this.eventToWorld(event);
     this.render();
@@ -165,18 +192,19 @@ export class LevelEditor {
 
     this.dragEnd = this.eventToWorld(event);
     const rectangle = rectangleFromPoints(this.dragStart, this.dragEnd);
+    if (this.tool === 'moving') {
+      this.pendingMovingPlatform = rectangle;
+      this.pendingMovingTarget = { x: rectangle.x, y: rectangle.y };
+      this.cancelDrag();
+      this.showMessage('Move the ghost platform to its destination, then click.');
+      this.render();
+      return;
+    }
+
     this.saveHistory();
 
     if (this.tool === 'platform') this.level.platforms.push(rectangle);
     if (this.tool === 'hazard') this.level.hazards.push(rectangle);
-    if (this.tool === 'moving-x' || this.tool === 'moving-y') {
-      this.level.movingPlatforms.push({
-        ...rectangle,
-        axis: this.tool === 'moving-x' ? 'x' : 'y',
-        distance: 200,
-        speed: 1,
-      });
-    }
     if (this.tool === 'crumble') {
       this.level.crumblePlatforms.push({
         ...rectangle,
@@ -192,6 +220,21 @@ export class LevelEditor {
   private cancelDrag(): void {
     this.dragStart = null;
     this.dragEnd = null;
+  }
+
+  private targetPosition(cursor: Point, platform: Rectangle): Point {
+    return {
+      x: clamp(
+        snap(cursor.x - platform.width / 2),
+        0,
+        this.level.world.width - platform.width,
+      ),
+      y: clamp(
+        snap(cursor.y - platform.height / 2),
+        0,
+        this.level.world.height - platform.height,
+      ),
+    };
   }
 
   private eraseAt(point: Point): void {
@@ -356,6 +399,14 @@ export class LevelEditor {
     this.level.movingPlatforms.forEach((item) => {
       drawRectangle(context, item, scaleX, scaleY, '#315f78', '#71c6e8');
       drawRail(context, item, scaleX, scaleY);
+      drawRectangle(
+        context,
+        { ...item.target, width: item.width, height: item.height },
+        scaleX,
+        scaleY,
+        '#315f7833',
+        '#71c6e888',
+      );
     });
     this.level.crumblePlatforms.forEach((item) =>
       drawRectangle(context, item, scaleX, scaleY, '#73564f', '#d89779'),
@@ -384,6 +435,18 @@ export class LevelEditor {
       const preview = rectangleFromPoints(this.dragStart, this.dragEnd);
       const color = this.tool === 'hazard' ? '#f06156' : '#c9fa49';
       drawRectangle(context, preview, scaleX, scaleY, `${color}33`, color);
+    }
+
+    if (this.pendingMovingPlatform && this.pendingMovingTarget) {
+      const pending = this.pendingMovingPlatform;
+      const target = {
+        ...this.pendingMovingTarget,
+        width: pending.width,
+        height: pending.height,
+      };
+      drawRectangle(context, pending, scaleX, scaleY, '#315f78', '#71c6e8');
+      drawPathBetween(context, pending, target, scaleX, scaleY);
+      drawRectangle(context, target, scaleX, scaleY, '#315f7855', '#bdeeff');
     }
 
     setText('#platform-count', String(this.level.platforms.length));
@@ -475,10 +538,26 @@ function drawRail(
   scaleX: number,
   scaleY: number,
 ): void {
-  const startX = (item.x + item.width / 2) * scaleX;
-  const startY = (item.y + item.height / 2) * scaleY;
-  const endX = startX + (item.axis === 'x' ? item.distance * scaleX : 0);
-  const endY = startY + (item.axis === 'y' ? item.distance * scaleY : 0);
+  drawPathBetween(
+    context,
+    item,
+    { ...item.target, width: item.width, height: item.height },
+    scaleX,
+    scaleY,
+  );
+}
+
+function drawPathBetween(
+  context: CanvasRenderingContext2D,
+  start: Rectangle,
+  target: Rectangle,
+  scaleX: number,
+  scaleY: number,
+): void {
+  const startX = (start.x + start.width / 2) * scaleX;
+  const startY = (start.y + start.height / 2) * scaleY;
+  const endX = (target.x + target.width / 2) * scaleX;
+  const endY = (target.y + target.height / 2) * scaleY;
 
   context.beginPath();
   context.moveTo(startX, startY);
@@ -552,6 +631,10 @@ function drawMarker(
 
 function snap(value: number): number {
   return Math.round(value / GRID_SIZE) * GRID_SIZE;
+}
+
+function clamp(value: number, minimum: number, maximum: number): number {
+  return Math.max(minimum, Math.min(maximum, value));
 }
 
 function slugify(value: string): string {

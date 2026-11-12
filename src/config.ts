@@ -9,8 +9,7 @@ export type Rectangle = Point & {
 };
 
 export type MovingPlatform = Rectangle & {
-  axis: 'x' | 'y';
-  distance: number;
+  target: Point;
   speed: number;
 };
 
@@ -134,8 +133,7 @@ export const DEFAULT_LEVEL: LevelDefinition = {
       y: 330,
       width: 120,
       height: 18,
-      axis: 'x',
-      distance: 180,
+      target: { x: 1_480, y: 270 },
       speed: 1.1,
     },
   ],
