@@ -208,6 +208,10 @@
   touch-action: none;
 }
 
+#editor-canvas.placing-arrow {
+  cursor: none;
+}
+
 .editor-canvas-meta {
   position: absolute;
   inset: auto 20px 20px;

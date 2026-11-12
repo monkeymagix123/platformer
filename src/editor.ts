@@ -79,6 +79,7 @@ export class LevelEditor {
         this.tool = button.dataset.editorTool as EditorTool;
         this.pendingMovingPlatform = null;
         this.pendingMovingTarget = null;
+        this.canvas.classList.toggle('placing-arrow', this.tool === 'arrow');
         document.querySelectorAll('[data-editor-tool]').forEach((item) =>
           item.classList.toggle('active', item === button),
         );
@@ -128,7 +129,7 @@ export class LevelEditor {
   }
 
   private pointerDown(event: PointerEvent): void {
-    const point = this.eventToWorld(event);
+    const point = this.eventToWorld(event, this.tool !== 'arrow');
 
     if (this.tool === 'moving' && this.pendingMovingPlatform) {
       this.saveHistory();
@@ -191,7 +192,7 @@ export class LevelEditor {
   }
 
   private pointerMove(event: PointerEvent): void {
-    this.hoverPoint = this.eventToWorld(event);
+    this.hoverPoint = this.eventToWorld(event, this.tool !== 'arrow');
 
     if (this.tool === 'moving' && this.pendingMovingPlatform) {
       this.pendingMovingTarget = this.targetPosition(
@@ -410,25 +411,27 @@ export class LevelEditor {
   }
 
   private resizeCanvas(): void {
-    const bounds = this.canvas.getBoundingClientRect();
+    const width = this.canvas.clientWidth;
+    const height = this.canvas.clientHeight;
     const ratio = Math.min(devicePixelRatio, 2);
-    this.canvas.width = Math.max(1, Math.floor(bounds.width * ratio));
-    this.canvas.height = Math.max(1, Math.floor(bounds.height * ratio));
+    this.canvas.width = Math.max(1, Math.floor(width * ratio));
+    this.canvas.height = Math.max(1, Math.floor(height * ratio));
     this.context.setTransform(ratio, 0, 0, ratio, 0, 0);
     this.render();
   }
 
   private render(): void {
     const { context } = this;
-    const bounds = this.canvas.getBoundingClientRect();
-    const scaleX = bounds.width / this.level.world.width;
-    const scaleY = bounds.height / this.level.world.height;
+    const width = this.canvas.clientWidth;
+    const height = this.canvas.clientHeight;
+    const scaleX = width / this.level.world.width;
+    const scaleY = height / this.level.world.height;
 
-    context.clearRect(0, 0, bounds.width, bounds.height);
+    context.clearRect(0, 0, width, height);
     context.fillStyle = '#0d1929';
-    context.fillRect(0, 0, bounds.width, bounds.height);
+    context.fillRect(0, 0, width, height);
 
-    this.drawGrid(context, bounds.width, bounds.height, scaleX, scaleY);
+    this.drawGrid(context, width, height, scaleX, scaleY);
     this.level.platforms.forEach((item) =>
       drawRectangle(context, item, scaleX, scaleY, '#294159', '#6f8ba3'),
     );
@@ -539,11 +542,13 @@ export class LevelEditor {
     context.stroke();
   }
 
-  private eventToWorld(event: PointerEvent): Point {
-    const bounds = this.canvas.getBoundingClientRect();
+  private eventToWorld(event: PointerEvent, snapToGrid = true): Point {
+    const worldX = (event.offsetX / this.canvas.clientWidth) * this.level.world.width;
+    const worldY = (event.offsetY / this.canvas.clientHeight) * this.level.world.height;
+
     return {
-      x: snap(((event.clientX - bounds.left) / bounds.width) * this.level.world.width),
-      y: snap(((event.clientY - bounds.top) / bounds.height) * this.level.world.height),
+      x: clamp(snapToGrid ? snap(worldX) : worldX, 0, this.level.world.width),
+      y: clamp(snapToGrid ? snap(worldY) : worldY, 0, this.level.world.height),
     };
   }
 }
