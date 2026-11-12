@@ -92,6 +92,7 @@ class PlatformerGame {
 
   private cameraX = 0;
   private pausedAt: number | null = null;
+  private standingPlatform: Rectangle | null = null;
 
   async initialize(host: HTMLDivElement): Promise<void> {
     await this.app.init({
@@ -203,6 +204,7 @@ class PlatformerGame {
   }
 
   private updatePhysics(deltaTime: number): void {
+    this.carryWithMovingPlatform();
     this.updateHorizontalMovement(deltaTime);
 
     if (this.input.jumpQueued) {
@@ -248,18 +250,37 @@ class PlatformerGame {
   }
 
   private resolveHorizontalCollisions(deltaTime: number): void {
+    const previousBounds = this.playerBounds();
     this.state.x += this.state.velocityX * deltaTime;
     this.state.wallDirection = 0;
 
     for (const platform of this.collisionPlatforms()) {
       if (!rectanglesOverlap(this.playerBounds(), platform)) continue;
 
-      if (this.state.velocityX > 0) {
+      const platformMotion = this.mechanics.motionFor(platform);
+      const previousPlatformX = platform.x - (platformMotion?.deltaX ?? 0);
+      const previousPlatformY = platform.y - (platformMotion?.deltaY ?? 0);
+
+      const wasVerticallyAligned =
+        previousBounds.y < previousPlatformY + platform.height &&
+        previousBounds.y + previousBounds.height > previousPlatformY;
+      if (!wasVerticallyAligned) continue;
+
+      const approachedFromLeft =
+        this.state.velocityX > 0 &&
+        previousBounds.x + previousBounds.width <= previousPlatformX;
+      const approachedFromRight =
+        this.state.velocityX < 0 &&
+        previousBounds.x >= previousPlatformX + platform.width;
+
+      if (approachedFromLeft) {
         this.state.x = platform.x - PLAYER.width / 2;
         this.state.wallDirection = 1;
-      } else if (this.state.velocityX < 0) {
+      } else if (approachedFromRight) {
         this.state.x = platform.x + platform.width + PLAYER.width / 2;
         this.state.wallDirection = -1;
+      } else {
+        continue;
       }
 
       this.state.velocityX = 0;
@@ -274,21 +295,34 @@ class PlatformerGame {
   }
 
   private resolveVerticalCollisions(deltaTime: number): void {
+    const previousBounds = this.playerBounds();
     this.state.y += this.state.velocityY * deltaTime;
     this.state.onGround = false;
+    this.standingPlatform = null;
 
     for (const platform of this.collisionPlatforms()) {
       if (!rectanglesOverlap(this.playerBounds(), platform)) continue;
 
-      if (this.state.velocityY > 0) {
+      const platformMotion = this.mechanics.motionFor(platform);
+      const previousPlatformY = platform.y - (platformMotion?.deltaY ?? 0);
+
+      const approachedFromAbove =
+        this.state.velocityY >= 0 &&
+        previousBounds.y + previousBounds.height <= previousPlatformY + 2;
+      const approachedFromBelow =
+        this.state.velocityY < 0 &&
+        previousBounds.y >= previousPlatformY + platform.height - 2;
+
+      if (approachedFromAbove) {
         this.state.y = platform.y - PLAYER.height / 2;
         this.state.onGround = true;
         this.state.jumpsUsed = 0;
-        const carry = this.mechanics.landOn(platform);
-        this.state.x += carry.deltaX;
-        this.state.y += carry.deltaY;
-      } else if (this.state.velocityY < 0) {
+        this.standingPlatform = platform;
+        this.mechanics.landOn(platform);
+      } else if (approachedFromBelow) {
         this.state.y = platform.y + platform.height + PLAYER.height / 2;
+      } else {
+        continue;
       }
 
       this.state.velocityY = 0;
@@ -300,6 +334,7 @@ class PlatformerGame {
       this.state.velocityY = -PLAYER.jumpSpeed;
       this.state.onGround = false;
       this.state.jumpsUsed = 1;
+      this.standingPlatform = null;
       this.sound.play(220, 0.06);
       return;
     }
@@ -420,6 +455,17 @@ class PlatformerGame {
     this.state.velocityX = 0;
     this.state.velocityY = 0;
     this.state.jumpsUsed = 0;
+    this.standingPlatform = null;
+  }
+
+  private carryWithMovingPlatform(): void {
+    if (!this.state.onGround || !this.standingPlatform) return;
+
+    const motion = this.mechanics.motionFor(this.standingPlatform);
+    if (!motion) return;
+
+    this.state.x += motion.deltaX;
+    this.state.y += motion.deltaY;
   }
 
   private render(deltaTime: number): void {

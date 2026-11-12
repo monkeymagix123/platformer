@@ -88,17 +88,19 @@ export class MechanicsSystem {
     ];
   }
 
-  landOn(platform: Rectangle): { deltaX: number; deltaY: number } {
+  motionFor(platform: Rectangle): { deltaX: number; deltaY: number } | null {
     const moving = this.movingPlatforms.find((item) => item.bounds === platform);
-    if (moving) return { deltaX: moving.deltaX, deltaY: moving.deltaY };
+    return moving
+      ? { deltaX: moving.deltaX, deltaY: moving.deltaY }
+      : null;
+  }
 
+  landOn(platform: Rectangle): void {
     const crumble = this.crumblePlatforms.find((item) => item.bounds === platform);
     if (crumble?.state === 'idle') {
       crumble.state = 'warning';
       crumble.timer = crumble.definition.delay;
     }
-
-    return { deltaX: 0, deltaY: 0 };
   }
 
   arrowHits(bounds: Rectangle): boolean {
