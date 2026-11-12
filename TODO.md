@@ -1,0 +1,2 @@
+- ~~Fix bug: going right off sliding platform sticks player to the platform for a bit~~
+- Add option to save & name levels created (in local storage), standardize to base 64 export & import
