@@ -1,7 +1,10 @@
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vite';
 
 export default defineConfig({
-    server: {
-        port: 3000,
-    }
-})
+  // GitHub project sites are hosted below /<repository>/ rather than at /.
+  // The workflow supplies this value; local development continues to use /.
+  base: process.env.VITE_BASE_PATH ?? '/',
+  server: {
+    port: 3000,
+  },
+});
