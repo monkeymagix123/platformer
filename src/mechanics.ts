@@ -12,7 +12,8 @@ type MovingRuntime = {
   definition: MovingPlatform;
   bounds: Rectangle;
   sprite: Graphics;
-  time: number;
+  progress: number;
+  direction: 1 | -1;
   deltaX: number;
   deltaY: number;
 };
@@ -60,7 +61,8 @@ export class MechanicsSystem {
 
   reset(): void {
     for (const moving of this.movingPlatforms) {
-      moving.time = 0;
+      moving.progress = 0;
+      moving.direction = 1;
       moving.deltaX = 0;
       moving.deltaY = 0;
       moving.bounds.x = moving.definition.x;
@@ -149,7 +151,8 @@ export class MechanicsSystem {
           height: definition.height,
         },
         sprite,
-        time: 0,
+        progress: 0,
+        direction: 1,
         deltaX: 0,
         deltaY: 0,
       });
@@ -199,12 +202,25 @@ export class MechanicsSystem {
 
   private updateMovingPlatforms(deltaTime: number): void {
     for (const moving of this.movingPlatforms) {
-      moving.time += deltaTime * moving.definition.speed;
-      const progress = (1 - Math.cos(moving.time)) / 2;
+      const pathX = moving.definition.target.x - moving.definition.x;
+      const pathY = moving.definition.target.y - moving.definition.y;
+      const pathLength = Math.max(1, Math.hypot(pathX, pathY));
+      const progressDelta =
+        (moving.definition.speed * deltaTime) / pathLength * moving.direction;
+
+      moving.progress += progressDelta;
+      if (moving.progress >= 1) {
+        moving.progress = 1;
+        moving.direction = -1;
+      } else if (moving.progress <= 0) {
+        moving.progress = 0;
+        moving.direction = 1;
+      }
+
       const nextX = moving.definition.x +
-        (moving.definition.target.x - moving.definition.x) * progress;
+        pathX * moving.progress;
       const nextY = moving.definition.y +
-        (moving.definition.target.y - moving.definition.y) * progress;
+        pathY * moving.progress;
 
       moving.deltaX = nextX - moving.bounds.x;
       moving.deltaY = nextY - moving.bounds.y;

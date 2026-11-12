@@ -134,7 +134,7 @@ export const DEFAULT_LEVEL: LevelDefinition = {
       width: 120,
       height: 18,
       target: { x: 1_480, y: 270 },
-      speed: 1.1,
+      speed: 120,
     },
   ],
   crumblePlatforms: [

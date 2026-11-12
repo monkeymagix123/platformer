@@ -183,6 +183,56 @@
 .tool-swatch.finish { border-radius: 50%; background: var(--acid); border: 0; }
 .tool-swatch.erase { background: #263345; color: #bdc6ce; }
 
+.moving-speed-control {
+  display: none;
+  margin: 2px 7px 10px;
+  padding: 10px;
+  border: 1px solid rgba(113, 198, 232, 0.22);
+  background: #0a1524;
+}
+
+.tool-button.active + .moving-speed-control {
+  display: block;
+}
+
+.moving-speed-control > span,
+.moving-speed-control small {
+  color: #748498;
+  font: 7px "DM Mono", monospace;
+  letter-spacing: 0.1em;
+}
+
+.moving-speed-control small {
+  display: block;
+  margin-top: 8px;
+}
+
+.moving-speed-control small b {
+  color: #71c6e8;
+}
+
+.speed-presets {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+  margin-top: 7px;
+}
+
+.speed-presets button {
+  padding: 6px 2px;
+  border: 1px solid #2a3b4e;
+  background: #142236;
+  color: #738296;
+  font: 6px "DM Mono", monospace;
+  cursor: pointer;
+}
+
+.speed-presets button.active {
+  border-color: #71c6e8;
+  color: #bdeeff;
+  background: rgba(113, 198, 232, 0.12);
+}
+
 .editor-danger {
   width: calc(100% - 14px);
   margin: 24px 7px 0;

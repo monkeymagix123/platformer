@@ -94,7 +94,7 @@ function readMovingPlatform(
   return {
     ...rectangle,
     target,
-    speed: clamp(readDecimal(value.speed, `${label}.speed`), 0.1, 5),
+    speed: clamp(readNumber(value.speed, `${label}.speed`), 20, 500),
   };
 }
 

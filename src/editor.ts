@@ -35,6 +35,7 @@ export class LevelEditor {
   private pendingMovingTarget: Point | null = null;
   private hoverPoint: Point | null = null;
   private arrowDirection: ArrowTrap['direction'] = 'right';
+  private movingSpeed = 120;
 
   private readonly modal = select('#editor-modal');
   private readonly canvas = selectCanvas('#editor-canvas');
@@ -79,6 +80,7 @@ export class LevelEditor {
         this.tool = button.dataset.editorTool as EditorTool;
         this.pendingMovingPlatform = null;
         this.pendingMovingTarget = null;
+        this.updateMovingTravelTime();
         this.canvas.classList.toggle('placing-arrow', this.tool === 'arrow');
         document.querySelectorAll('[data-editor-tool]').forEach((item) =>
           item.classList.toggle('active', item === button),
@@ -89,6 +91,16 @@ export class LevelEditor {
           );
         }
         this.render();
+      });
+    });
+
+    document.querySelectorAll<HTMLButtonElement>('[data-moving-speed]').forEach((button) => {
+      button.addEventListener('click', () => {
+        this.movingSpeed = Number(button.dataset.movingSpeed);
+        document.querySelectorAll('[data-moving-speed]').forEach((item) =>
+          item.classList.toggle('active', item === button),
+        );
+        this.updateMovingTravelTime();
       });
     });
 
@@ -136,11 +148,17 @@ export class LevelEditor {
       this.level.movingPlatforms.push({
         ...this.pendingMovingPlatform,
         target: this.targetPosition(point, this.pendingMovingPlatform),
-        speed: 1,
+        speed: this.movingSpeed,
       });
+      const travelTime = this.movingTravelTime(
+        this.pendingMovingPlatform,
+        this.targetPosition(point, this.pendingMovingPlatform),
+      );
       this.pendingMovingPlatform = null;
       this.pendingMovingTarget = null;
-      this.showMessage('Moving platform path created.');
+      this.showMessage(
+        `Moving platform created at ${this.movingSpeed} px/s (${travelTime.toFixed(1)}s one way).`,
+      );
       this.render();
       return;
     }
@@ -199,6 +217,7 @@ export class LevelEditor {
         this.hoverPoint,
         this.pendingMovingPlatform,
       );
+      this.updateMovingTravelTime();
       this.render();
       return;
     }
@@ -237,6 +256,7 @@ export class LevelEditor {
       this.pendingMovingTarget = { x: rectangle.x, y: rectangle.y };
       this.cancelDrag();
       this.showMessage('Move the ghost platform to its destination, then click.');
+      this.updateMovingTravelTime();
       this.render();
       return;
     }
@@ -275,6 +295,23 @@ export class LevelEditor {
         this.level.world.height - platform.height,
       ),
     };
+  }
+
+  private updateMovingTravelTime(): void {
+    const output = select('#moving-travel-time');
+    if (!this.pendingMovingPlatform || !this.pendingMovingTarget) {
+      output.textContent = '—';
+      return;
+    }
+
+    output.textContent = `${this.movingTravelTime(
+      this.pendingMovingPlatform,
+      this.pendingMovingTarget,
+    ).toFixed(1)}s`;
+  }
+
+  private movingTravelTime(start: Rectangle, target: Point): number {
+    return Math.hypot(target.x - start.x, target.y - start.y) / this.movingSpeed;
   }
 
   private eraseAt(point: Point): void {

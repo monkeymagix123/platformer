@@ -69,6 +69,15 @@
           <button class="tool-button active" data-editor-tool="platform"><i class="tool-swatch platform"></i><span>PLATFORM<small>Drag to draw</small></span></button>
           <button class="tool-button" data-editor-tool="hazard"><i class="tool-swatch hazard"></i><span>HAZARD<small>Drag to draw</small></span></button>
           <button class="tool-button" data-editor-tool="moving"><i class="tool-swatch moving">◇</i><span>SLIDING<small>Draw, then place end</small></span></button>
+          <div class="moving-speed-control">
+            <span>MOVEMENT SPEED</span>
+            <div class="speed-presets">
+              <button data-moving-speed="70">SLOW</button>
+              <button class="active" data-moving-speed="120">NORMAL</button>
+              <button data-moving-speed="190">FAST</button>
+            </div>
+            <small>ONE WAY: <b id="moving-travel-time">—</b></small>
+          </div>
           <button class="tool-button" data-editor-tool="crumble"><i class="tool-swatch crumble">⌁</i><span>CRUMBLE<small>Falls after touch</small></span></button>
           <button class="tool-button" data-editor-tool="arrow"><i class="tool-swatch arrow" id="arrow-tool-icon">→</i><span>ARROW<small>Click to place · R rotates</small></span></button>
           <button class="tool-button" data-editor-tool="shard"><i class="tool-swatch shard"></i><span>SHARD<small>Click to place</small></span></button>
