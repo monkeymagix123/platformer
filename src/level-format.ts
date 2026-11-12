@@ -89,32 +89,12 @@ function readMovingPlatform(
   const rectangle = readRectangle(value, label, world);
   if (!isRecord(value)) throw new Error(`${label} must be an object.`);
 
-  const target = isRecord(value.target)
-    ? readPoint(value.target, `${label}.target`, world)
-    : legacyMovingTarget(value, rectangle, label, world);
+  const target = readPoint(value.target, `${label}.target`, world);
 
   return {
     ...rectangle,
     target,
     speed: clamp(readDecimal(value.speed, `${label}.speed`), 0.1, 5),
-  };
-}
-
-function legacyMovingTarget(
-  value: Record<string, unknown>,
-  rectangle: Rectangle,
-  label: string,
-  world: LevelDefinition['world'],
-): Point {
-  const distance = clamp(
-    readNumber(value.distance, `${label}.distance`),
-    20,
-    2_000,
-  );
-
-  return {
-    x: clamp(rectangle.x + (value.axis === 'y' ? 0 : distance), 0, world.width),
-    y: clamp(rectangle.y + (value.axis === 'y' ? distance : 0), 0, world.height),
   };
 }
 
