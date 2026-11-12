@@ -1,4 +1,10 @@
-import { DEFAULT_LEVEL, LevelDefinition, Point, Rectangle } from './config';
+import {
+  ArrowTrap,
+  DEFAULT_LEVEL,
+  LevelDefinition,
+  Point,
+  Rectangle,
+} from './config';
 import {
   cloneLevel,
   exportLevelBase64,
@@ -11,8 +17,7 @@ type EditorTool =
   | 'hazard'
   | 'moving'
   | 'crumble'
-  | 'arrow-left'
-  | 'arrow-right'
+  | 'arrow'
   | 'shard'
   | 'spawn'
   | 'finish'
@@ -28,6 +33,8 @@ export class LevelEditor {
   private dragEnd: Point | null = null;
   private pendingMovingPlatform: Rectangle | null = null;
   private pendingMovingTarget: Point | null = null;
+  private hoverPoint: Point | null = null;
+  private arrowDirection: ArrowTrap['direction'] = 'right';
 
   private readonly modal = select('#editor-modal');
   private readonly canvas = selectCanvas('#editor-canvas');
@@ -50,6 +57,7 @@ export class LevelEditor {
     this.history = [];
     this.pendingMovingPlatform = null;
     this.pendingMovingTarget = null;
+    this.hoverPoint = null;
     this.nameInput.value = this.level.name;
     this.modal.classList.add('open');
     this.modal.setAttribute('aria-hidden', 'false');
@@ -74,6 +82,12 @@ export class LevelEditor {
         document.querySelectorAll('[data-editor-tool]').forEach((item) =>
           item.classList.toggle('active', item === button),
         );
+        if (this.tool === 'arrow') {
+          this.showMessage(
+            `Arrow launcher fires ${this.arrowDirection}. Press R to rotate.`,
+          );
+        }
+        this.render();
       });
     });
 
@@ -106,6 +120,11 @@ export class LevelEditor {
     this.canvas.addEventListener('pointermove', (event) => this.pointerMove(event));
     this.canvas.addEventListener('pointerup', (event) => this.pointerUp(event));
     this.canvas.addEventListener('pointercancel', () => this.cancelDrag());
+    this.canvas.addEventListener('pointerleave', () => {
+      this.hoverPoint = null;
+      this.render();
+    });
+    window.addEventListener('keydown', (event) => this.keyDown(event));
   }
 
   private pointerDown(event: PointerEvent): void {
@@ -155,11 +174,10 @@ export class LevelEditor {
           height: 200,
         };
         break;
-      case 'arrow-left':
-      case 'arrow-right':
+      case 'arrow':
         this.level.arrowTraps.push({
           ...point,
-          direction: this.tool === 'arrow-left' ? 'left' : 'right',
+          direction: this.arrowDirection,
           interval: 1.8,
           speed: 420,
         });
@@ -173,9 +191,11 @@ export class LevelEditor {
   }
 
   private pointerMove(event: PointerEvent): void {
+    this.hoverPoint = this.eventToWorld(event);
+
     if (this.tool === 'moving' && this.pendingMovingPlatform) {
       this.pendingMovingTarget = this.targetPosition(
-        this.eventToWorld(event),
+        this.hoverPoint,
         this.pendingMovingPlatform,
       );
       this.render();
@@ -183,7 +203,26 @@ export class LevelEditor {
     }
 
     if (!this.dragStart) return;
-    this.dragEnd = this.eventToWorld(event);
+    this.dragEnd = this.hoverPoint;
+    this.render();
+  }
+
+  private keyDown(event: KeyboardEvent): void {
+    if (
+      !this.modal.classList.contains('open') ||
+      this.tool !== 'arrow' ||
+      event.code !== 'KeyR'
+    ) return;
+
+    event.preventDefault();
+    const directions: ArrowTrap['direction'][] = ['right', 'down', 'left', 'up'];
+    const directionIndex = directions.indexOf(this.arrowDirection);
+    this.arrowDirection = directions[(directionIndex + 1) % directions.length];
+    const icon = document.querySelector<HTMLElement>('#arrow-tool-icon');
+    if (icon) icon.textContent = directionIcon(this.arrowDirection);
+    this.showMessage(
+      `Arrow launcher now fires ${this.arrowDirection}. Press R to rotate.`,
+    );
     this.render();
   }
 
@@ -414,6 +453,22 @@ export class LevelEditor {
     this.level.arrowTraps.forEach((trap) =>
       drawArrowTrap(context, trap, scaleX, scaleY),
     );
+    if (this.tool === 'arrow' && this.hoverPoint) {
+      context.save();
+      context.globalAlpha = 0.55;
+      drawArrowTrap(
+        context,
+        {
+          ...this.hoverPoint,
+          direction: this.arrowDirection,
+          interval: 1.8,
+          speed: 420,
+        },
+        scaleX,
+        scaleY,
+      );
+      context.restore();
+    }
     this.level.shards.forEach((point) =>
       drawDiamond(context, point, scaleX, scaleY, '#c9fa49'),
     );
@@ -576,14 +631,27 @@ function drawArrowTrap(
 ): void {
   const x = trap.x * scaleX;
   const y = trap.y * scaleY;
-  const direction = trap.direction === 'right' ? 1 : -1;
+  const vectors: Record<ArrowTrap['direction'], Point> = {
+    right: { x: 1, y: 0 },
+    down: { x: 0, y: 1 },
+    left: { x: -1, y: 0 },
+    up: { x: 0, y: -1 },
+  };
+  const direction = vectors[trap.direction];
+  const perpendicular = { x: -direction.y, y: direction.x };
 
   context.fillStyle = '#6b3440';
   context.fillRect(x - 6, y - 7, 12, 14);
   context.beginPath();
-  context.moveTo(x - 3 * direction, y - 5);
-  context.lineTo(x + 9 * direction, y);
-  context.lineTo(x - 3 * direction, y + 5);
+  context.moveTo(
+    x - 3 * direction.x - 5 * perpendicular.x,
+    y - 3 * direction.y - 5 * perpendicular.y,
+  );
+  context.lineTo(x + 9 * direction.x, y + 9 * direction.y);
+  context.lineTo(
+    x - 3 * direction.x + 5 * perpendicular.x,
+    y - 3 * direction.y + 5 * perpendicular.y,
+  );
   context.closePath();
   context.fillStyle = '#f06156';
   context.fill();
@@ -631,6 +699,10 @@ function drawMarker(
 
 function snap(value: number): number {
   return Math.round(value / GRID_SIZE) * GRID_SIZE;
+}
+
+function directionIcon(direction: ArrowTrap['direction']): string {
+  return { right: '→', down: '↓', left: '←', up: '↑' }[direction];
 }
 
 function clamp(value: number, minimum: number, maximum: number): number {

@@ -123,10 +123,17 @@ function readArrowTrap(
 
   return {
     ...point,
-    direction: value.direction === 'left' ? 'left' : 'right',
+    direction: readArrowDirection(value.direction),
     interval: clamp(readDecimal(value.interval, `${label}.interval`), 0.25, 20),
     speed: clamp(readNumber(value.speed, `${label}.speed`), 80, 1_500),
   };
+}
+
+function readArrowDirection(value: unknown): ArrowTrap['direction'] {
+  if (value === 'right' || value === 'down' || value === 'left' || value === 'up') {
+    return value;
+  }
+  throw new Error('Arrow direction must be right, down, left, or up.');
 }
 
 function readWorld(value: unknown): LevelDefinition['world'] {

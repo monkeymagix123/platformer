@@ -19,7 +19,7 @@ export type CrumblePlatform = Rectangle & {
 };
 
 export type ArrowTrap = Point & {
-  direction: 'left' | 'right';
+  direction: 'right' | 'down' | 'left' | 'up';
   interval: number;
   speed: number;
 };

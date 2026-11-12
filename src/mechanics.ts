@@ -34,6 +34,7 @@ type ArrowRuntime = {
   x: number;
   y: number;
   velocityX: number;
+  velocityY: number;
   sprite: Graphics;
 };
 
@@ -105,7 +106,7 @@ export class MechanicsSystem {
 
   arrowHits(bounds: Rectangle): boolean {
     const hitIndex = this.arrows.findIndex((arrow) =>
-      overlaps(bounds, { x: arrow.x - 14, y: arrow.y - 4, width: 28, height: 8 }),
+      overlaps(bounds, arrowBounds(arrow)),
     );
     if (hitIndex < 0) return false;
 
@@ -184,13 +185,13 @@ export class MechanicsSystem {
 
   private buildArrowTraps(): void {
     for (const definition of this.level.arrowTraps) {
-      const facing = definition.direction === 'right' ? 1 : -1;
       const launcher = new Graphics()
         .rect(-12, -14, 24, 28)
         .fill(0x6b3440)
-        .poly([0, -7, 13 * facing, 0, 0, 7])
+        .poly([0, -7, 13, 0, 0, 7])
         .fill(COLORS.danger);
       launcher.position.set(definition.x, definition.y);
+      launcher.rotation = directionAngle(definition.direction);
       this.layer.addChild(launcher);
       this.traps.push({ definition, timer: definition.interval * 0.55 });
     }
@@ -245,23 +246,22 @@ export class MechanicsSystem {
     for (let index = this.arrows.length - 1; index >= 0; index -= 1) {
       const arrow = this.arrows[index];
       arrow.x += arrow.velocityX * deltaTime;
+      arrow.y += arrow.velocityY * deltaTime;
       arrow.sprite.x = arrow.x;
+      arrow.sprite.y = arrow.y;
 
-      const arrowBounds = {
-        x: arrow.x - 14,
-        y: arrow.y - 4,
-        width: 28,
-        height: 8,
-      };
+      const currentArrowBounds = arrowBounds(arrow);
       const hitPlatform = [
         ...this.level.platforms,
         ...this.getCollisionPlatforms(),
-      ].some((platform) => overlaps(arrowBounds, platform));
+      ].some((platform) => overlaps(currentArrowBounds, platform));
 
       if (
         hitPlatform ||
         arrow.x < -50 ||
-        arrow.x > this.level.world.width + 50
+        arrow.x > this.level.world.width + 50 ||
+        arrow.y < -50 ||
+        arrow.y > this.level.world.height + 50
       ) {
         arrow.sprite.destroy();
         this.arrows.splice(index, 1);
@@ -270,22 +270,52 @@ export class MechanicsSystem {
   }
 
   private spawnArrow(trap: ArrowTrap): void {
-    const direction = trap.direction === 'right' ? 1 : -1;
+    const vector = directionVector(trap.direction);
     const sprite = new Graphics()
       .rect(-12, -2, 21, 4)
       .fill(0xe8ded1)
-      .poly([9 * direction, -6, 16 * direction, 0, 9 * direction, 6])
+      .poly([9, -6, 16, 0, 9, 6])
       .fill(COLORS.danger);
-    sprite.position.set(trap.x + direction * 20, trap.y);
+    sprite.rotation = directionAngle(trap.direction);
+    sprite.position.set(trap.x + vector.x * 20, trap.y + vector.y * 20);
     this.layer.addChild(sprite);
 
     this.arrows.push({
       x: sprite.x,
       y: sprite.y,
-      velocityX: direction * trap.speed,
+      velocityX: vector.x * trap.speed,
+      velocityY: vector.y * trap.speed,
       sprite,
     });
   }
+}
+
+function directionVector(direction: ArrowTrap['direction']): { x: number; y: number } {
+  return {
+    right: { x: 1, y: 0 },
+    down: { x: 0, y: 1 },
+    left: { x: -1, y: 0 },
+    up: { x: 0, y: -1 },
+  }[direction];
+}
+
+function directionAngle(direction: ArrowTrap['direction']): number {
+  return {
+    right: 0,
+    down: Math.PI / 2,
+    left: Math.PI,
+    up: -Math.PI / 2,
+  }[direction];
+}
+
+function arrowBounds(arrow: ArrowRuntime): Rectangle {
+  const isHorizontal = arrow.velocityX !== 0;
+  return {
+    x: arrow.x - (isHorizontal ? 14 : 4),
+    y: arrow.y - (isHorizontal ? 4 : 14),
+    width: isHorizontal ? 28 : 8,
+    height: isHorizontal ? 8 : 28,
+  };
 }
 
 function overlaps(a: Rectangle, b: Rectangle): boolean {
