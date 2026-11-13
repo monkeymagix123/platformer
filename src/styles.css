@@ -122,16 +122,29 @@
 .menu-back {
   width: max-content;
   margin-bottom: 24px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: #7b8998;
-  font: 9px "DM Mono", monospace;
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid rgba(201, 250, 73, 0.3);
+  background: rgba(17, 30, 48, 0.88);
+  color: #c5d0d5;
+  font: 500 10px "DM Mono", monospace;
   letter-spacing: 0.12em;
   cursor: pointer;
+  box-shadow: 4px 4px 0 rgba(201, 250, 73, 0.07);
+  transition: border-color 0.18s, background 0.18s, color 0.18s, transform 0.18s;
 }
 
-.menu-back:hover { color: var(--acid); }
+.menu-back:hover {
+  border-color: var(--acid);
+  background: rgba(201, 250, 73, 0.1);
+  color: var(--acid);
+  transform: translateX(-3px);
+}
+
+.menu-back:focus-visible {
+  outline: 2px solid var(--acid);
+  outline-offset: 3px;
+}
 
 .level-card {
   min-height: 78px;
