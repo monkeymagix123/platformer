@@ -219,6 +219,11 @@ export class LevelEditor {
   private pointerMove(event: PointerEvent): void {
     this.hoverPoint = this.eventToWorld(event, this.tool !== 'arrow');
 
+    if (this.tool === 'arrow') {
+      this.render();
+      return;
+    }
+
     if (this.tool === 'moving' && this.pendingMovingPlatform) {
       this.pendingMovingTarget = this.targetPosition(
         this.hoverPoint,
@@ -697,30 +702,29 @@ function drawArrowTrap(
 ): void {
   const x = trap.x * scaleX;
   const y = trap.y * scaleY;
-  const vectors: Record<ArrowTrap['direction'], Point> = {
-    right: { x: 1, y: 0 },
-    down: { x: 0, y: 1 },
-    left: { x: -1, y: 0 },
-    up: { x: 0, y: -1 },
+  const angle: Record<ArrowTrap['direction'], number> = {
+    right: 0,
+    down: Math.PI / 2,
+    left: Math.PI,
+    up: -Math.PI / 2,
   };
-  const direction = vectors[trap.direction];
-  const perpendicular = { x: -direction.y, y: direction.x };
 
+  context.save();
+  context.translate(x, y);
+  context.rotate(angle[trap.direction]);
   context.fillStyle = '#6b3440';
-  context.fillRect(x - 6, y - 7, 12, 14);
+  context.strokeStyle = '#a95865';
+  context.lineWidth = 1;
+  context.fillRect(-7, -8, 14, 16);
+  context.strokeRect(-7, -8, 14, 16);
   context.beginPath();
-  context.moveTo(
-    x - 3 * direction.x - 5 * perpendicular.x,
-    y - 3 * direction.y - 5 * perpendicular.y,
-  );
-  context.lineTo(x + 9 * direction.x, y + 9 * direction.y);
-  context.lineTo(
-    x - 3 * direction.x + 5 * perpendicular.x,
-    y - 3 * direction.y + 5 * perpendicular.y,
-  );
+  context.moveTo(-2, -5);
+  context.lineTo(9, 0);
+  context.lineTo(-2, 5);
   context.closePath();
   context.fillStyle = '#f06156';
   context.fill();
+  context.restore();
 }
 
 function drawDiamond(

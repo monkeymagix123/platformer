@@ -24,5 +24,6 @@ UI
     - [x] Cannot type spaces in the level name
     - ~~[ ] Fix bug: going right off sliding platform sticks player to the platform for a bit~~
     - [x] Improve decoration of crumbling platforms so it is more obviously a crumbling platform
+    - [x] The arrow launcher ghost in the editor does not appear
 - Outdated
     - Clicking different levels under "saved levels" should highlight the currently loaded saved level
