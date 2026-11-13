@@ -23,5 +23,6 @@ UI
     - [x] Rename "Generate code" to "Export"
     - [x] Cannot type spaces in the level name
     - ~~[ ] Fix bug: going right off sliding platform sticks player to the platform for a bit~~
+    - [ ] Not sure if this is a bug, but the V in the decoration of crumbling platforms does not appear to be vertically symmetrical
 - Outdated
-    - [ ] Clicking different levels under "saved levels" should highlight the currently loaded saved level
+    - Clicking different levels under "saved levels" should highlight the currently loaded saved level
