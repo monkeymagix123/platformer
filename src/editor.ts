@@ -486,7 +486,7 @@ export class LevelEditor {
       );
     });
     this.level.crumblePlatforms.forEach((item) =>
-      drawRectangle(context, item, scaleX, scaleY, '#73564f', '#d89779'),
+      drawCrumblePlatform(context, item, scaleX, scaleY),
     );
     this.level.arrowTraps.forEach((trap) =>
       drawArrowTrap(context, trap, scaleX, scaleY),
@@ -625,6 +625,32 @@ function drawRectangle(
   context.lineWidth = 1;
   context.fillRect(item.x * scaleX, item.y * scaleY, item.width * scaleX, item.height * scaleY);
   context.strokeRect(item.x * scaleX, item.y * scaleY, item.width * scaleX, item.height * scaleY);
+}
+
+function drawCrumblePlatform(
+  context: CanvasRenderingContext2D,
+  item: Rectangle,
+  scaleX: number,
+  scaleY: number,
+): void {
+  drawRectangle(context, item, scaleX, scaleY, '#73564f', '#d89779');
+
+  const x = item.x * scaleX;
+  const y = item.y * scaleY;
+  const width = item.width * scaleX;
+  const height = item.height * scaleY;
+  context.beginPath();
+  context.moveTo(x + width * 0.47, y + 1);
+  context.lineTo(x + width * 0.5, y + height * 0.45);
+  context.lineTo(x + width * 0.42, y + height - 1);
+  context.moveTo(x + width * 0.5, y + height * 0.45);
+  context.lineTo(x + width * 0.63, y + height * 0.72);
+  context.lineTo(x + width * 0.7, y + height - 1);
+  context.moveTo(x + width * 0.49, y + height * 0.38);
+  context.lineTo(x + width * 0.34, y + height * 0.62);
+  context.strokeStyle = '#f0b28f';
+  context.lineWidth = 1.5;
+  context.stroke();
 }
 
 function drawRail(

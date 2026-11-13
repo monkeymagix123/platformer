@@ -62,7 +62,7 @@ class PlatformerGame {
   private readonly shards: Shard[] = [];
   private level = cloneLevel(DEFAULT_LEVEL);
   private terrain = createTerrain();
-  private mechanics = new MechanicsSystem(this.level);
+  private mechanics = this.createMechanics();
 
   private readonly state: PlayerState = {
     x: PLAYER.spawn.x,
@@ -166,7 +166,7 @@ class PlatformerGame {
       this.level.hazards,
       this.level.finish,
     );
-    this.mechanics = new MechanicsSystem(this.level);
+    this.mechanics = this.createMechanics();
     this.world.addChildAt(this.terrain, 1);
     this.world.addChildAt(this.mechanics.layer, 2);
 
@@ -190,6 +190,14 @@ class PlatformerGame {
         sprite,
       });
     }
+  }
+
+  private createMechanics(): MechanicsSystem {
+    return new MechanicsSystem(this.level, {
+      crumbleWarning: () => this.sound.play(155, 0.07),
+      crumbleCollapse: () => this.sound.play(82, 0.16),
+      crumbleReform: () => this.sound.play(270, 0.08),
+    });
   }
 
   private update(unboundedDeltaTime: number): void {

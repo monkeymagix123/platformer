@@ -21,9 +21,23 @@ type MovingRuntime = {
 type CrumbleRuntime = {
   definition: CrumblePlatform;
   bounds: Rectangle;
-  sprite: Graphics;
-  state: 'idle' | 'warning' | 'gone';
+  sprite: Container;
+  state: 'idle' | 'warning' | 'gone' | 'reforming';
   timer: number;
+};
+
+type CrumbleDebris = {
+  sprite: Graphics;
+  velocityX: number;
+  velocityY: number;
+  rotationSpeed: number;
+  life: number;
+};
+
+type MechanicsEvents = {
+  crumbleWarning?: () => void;
+  crumbleCollapse?: () => void;
+  crumbleReform?: () => void;
 };
 
 type TrapRuntime = {
@@ -46,8 +60,12 @@ export class MechanicsSystem {
   private readonly crumblePlatforms: CrumbleRuntime[] = [];
   private readonly traps: TrapRuntime[] = [];
   private readonly arrows: ArrowRuntime[] = [];
+  private readonly debris: CrumbleDebris[] = [];
 
-  constructor(private readonly level: LevelDefinition) {
+  constructor(
+    private readonly level: LevelDefinition,
+    private readonly events: MechanicsEvents = {},
+  ) {
     this.buildMovingPlatforms();
     this.buildCrumblePlatforms();
     this.buildArrowTraps();
@@ -75,7 +93,10 @@ export class MechanicsSystem {
       crumble.timer = 0;
       crumble.sprite.visible = true;
       crumble.sprite.alpha = 1;
+      crumble.sprite.position.set(crumble.definition.x, crumble.definition.y);
     }
+
+    this.clearDebris();
 
     for (const trap of this.traps) trap.timer = trap.definition.interval * 0.55;
     for (const arrow of this.arrows) arrow.sprite.destroy();
@@ -86,7 +107,10 @@ export class MechanicsSystem {
     return [
       ...this.movingPlatforms.map((moving) => moving.bounds),
       ...this.crumblePlatforms
-        .filter((crumble) => crumble.state !== 'gone')
+        .filter(
+          (crumble) =>
+            crumble.state === 'idle' || crumble.state === 'warning',
+        )
         .map((crumble) => crumble.bounds),
     ];
   }
@@ -103,6 +127,7 @@ export class MechanicsSystem {
     if (crumble?.state === 'idle') {
       crumble.state = 'warning';
       crumble.timer = crumble.definition.delay;
+      this.events.crumbleWarning?.();
     }
   }
 
@@ -161,13 +186,36 @@ export class MechanicsSystem {
 
   private buildCrumblePlatforms(): void {
     for (const definition of this.level.crumblePlatforms) {
-      const sprite = new Graphics()
+      const sprite = new Container();
+      const body = new Graphics()
         .rect(0, 0, definition.width, definition.height)
         .fill(0x73564f)
-        .moveTo(8, 2)
-        .lineTo(definition.width * 0.4, definition.height - 2)
-        .lineTo(definition.width * 0.7, 2)
-        .stroke({ color: 0xd89779, width: 2, alpha: 0.75 });
+        .rect(0, 0, definition.width, 3)
+        .fill({ color: 0xe0a184, alpha: 0.72 });
+      const segments = new Graphics();
+      for (let x = definition.width * 0.2; x < definition.width; x += definition.width * 0.2) {
+        segments
+          .moveTo(x, 3)
+          .lineTo(x - 3, definition.height - 2)
+          .stroke({ color: 0x4d3b3a, width: 1, alpha: 0.55 });
+      }
+      const cracks = new Graphics()
+        .moveTo(definition.width * 0.47, 1)
+        .lineTo(definition.width * 0.5, definition.height * 0.45)
+        .lineTo(definition.width * 0.42, definition.height - 1)
+        .moveTo(definition.width * 0.5, definition.height * 0.45)
+        .lineTo(definition.width * 0.63, definition.height * 0.72)
+        .lineTo(definition.width * 0.7, definition.height - 2)
+        .moveTo(definition.width * 0.49, definition.height * 0.38)
+        .lineTo(definition.width * 0.34, definition.height * 0.62)
+        .stroke({ color: 0xf0b28f, width: 2, alpha: 0.92 });
+      const looseEdges = new Graphics();
+      for (let x = 6; x < definition.width - 4; x += 18) {
+        looseEdges
+          .rect(x, definition.height - 3 + ((x / 18) % 2), 7, 4)
+          .fill({ color: 0x5d4642, alpha: 0.9 });
+      }
+      sprite.addChild(body, segments, cracks, looseEdges);
       sprite.position.set(definition.x, definition.y);
       this.layer.addChild(sprite);
 
@@ -232,22 +280,92 @@ export class MechanicsSystem {
 
   private updateCrumblePlatforms(deltaTime: number): void {
     for (const crumble of this.crumblePlatforms) {
-      if (crumble.state === 'idle') continue;
+      if (crumble.state === 'idle') {
+        if (Math.random() < deltaTime * 0.7) this.spawnCrumbleDust(crumble, 1);
+        continue;
+      }
 
       crumble.timer -= deltaTime;
       if (crumble.state === 'warning') {
-        crumble.sprite.alpha = 0.45 + Math.sin(crumble.timer * 35) * 0.3;
+        crumble.sprite.x =
+          crumble.definition.x + Math.sin(crumble.timer * 55) * 2.2;
+        crumble.sprite.alpha = 0.68 + Math.sin(crumble.timer * 35) * 0.22;
+        if (Math.random() < deltaTime * 9) this.spawnCrumbleDust(crumble, 1);
         if (crumble.timer <= 0) {
           crumble.state = 'gone';
           crumble.timer = crumble.definition.respawn;
           crumble.sprite.visible = false;
+          crumble.sprite.position.set(crumble.definition.x, crumble.definition.y);
+          this.spawnCrumbleDust(crumble, 7, true);
+          this.events.crumbleCollapse?.();
         }
-      } else if (crumble.timer <= 0) {
-        crumble.state = 'idle';
+      } else if (crumble.state === 'gone' && crumble.timer <= 0) {
+        crumble.state = 'reforming';
+        crumble.timer = 0.35;
         crumble.sprite.visible = true;
-        crumble.sprite.alpha = 1;
+        crumble.sprite.alpha = 0;
+        crumble.sprite.y = crumble.definition.y + 8;
+        this.events.crumbleReform?.();
+      } else if (crumble.state === 'reforming') {
+        const progress = Math.min(1, 1 - crumble.timer / 0.35);
+        crumble.sprite.alpha = progress;
+        crumble.sprite.y = crumble.definition.y + (1 - progress) * 8;
+        if (crumble.timer <= 0) {
+          crumble.state = 'idle';
+          crumble.sprite.position.set(crumble.definition.x, crumble.definition.y);
+          crumble.sprite.alpha = 1;
+        }
       }
     }
+
+    this.updateDebris(deltaTime);
+  }
+
+  private spawnCrumbleDust(
+    crumble: CrumbleRuntime,
+    count: number,
+    chunks = false,
+  ): void {
+    for (let index = 0; index < count; index += 1) {
+      const size = chunks ? 5 + Math.random() * 7 : 2 + Math.random() * 2;
+      const sprite = new Graphics()
+        .rect(-size / 2, -size / 2, size, size * (chunks ? 0.65 : 1))
+        .fill(chunks ? 0x73564f : 0xd89779);
+      sprite.position.set(
+        crumble.definition.x + Math.random() * crumble.definition.width,
+        crumble.definition.y + crumble.definition.height,
+      );
+      this.layer.addChild(sprite);
+      this.debris.push({
+        sprite,
+        velocityX: chunks ? (Math.random() - 0.5) * 95 : (Math.random() - 0.5) * 18,
+        velocityY: chunks ? -35 - Math.random() * 80 : 15 + Math.random() * 25,
+        rotationSpeed: (Math.random() - 0.5) * 7,
+        life: chunks ? 0.85 : 0.45,
+      });
+    }
+  }
+
+  private updateDebris(deltaTime: number): void {
+    for (let index = this.debris.length - 1; index >= 0; index -= 1) {
+      const debris = this.debris[index];
+      debris.life -= deltaTime;
+      debris.velocityY += 520 * deltaTime;
+      debris.sprite.x += debris.velocityX * deltaTime;
+      debris.sprite.y += debris.velocityY * deltaTime;
+      debris.sprite.rotation += debris.rotationSpeed * deltaTime;
+      debris.sprite.alpha = Math.max(0, debris.life * 1.5);
+
+      if (debris.life <= 0) {
+        debris.sprite.destroy();
+        this.debris.splice(index, 1);
+      }
+    }
+  }
+
+  private clearDebris(): void {
+    for (const debris of this.debris) debris.sprite.destroy();
+    this.debris.length = 0;
   }
 
   private updateArrowTraps(deltaTime: number): void {
