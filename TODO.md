@@ -1,4 +1,17 @@
 # TODO
+
+Gameplay
+- Features
+  - [ ] new traps
+    - [ ] lasers
+  - [ ] new blocks
+- Major
+- Minor
+- Minor
+- Outdated
+
+
+UI
 - Minor
     - [x] Make it more obvious how to rename level name (eg gray "click to rename")
     - [x] Rename "Generate code" to "Export"
