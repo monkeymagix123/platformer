@@ -1,11 +1,13 @@
-- ~~[ ] Fix bug: going right off sliding platform sticks player to the platform for a bit~~
-- [x] Add option to save & name levels created (in local storage), standardize to base 64 export & import
-    - Minor
-        - [x] Make it more obvious how to rename level name (eg gray "click to rename")
-        - [x] Rename "Generate code" to "Export"
-        - [x] Cannot type spaces in the level name
-    - Major
-        - [x] "Saved levels" list can get cluttered. Separate list of saved levels from the level editor, and instead create a separate screen / tab for saved levels. Saving should take user to the saved levels screen
-        - [x] Create menu screen (eg something like play > official levels & saved levels, editor)
-    - Outdated
-        - [ ] Clicking different levels under "saved levels" should highlight the currently loaded saved level
+# TODO
+- Minor
+    - [x] Make it more obvious how to rename level name (eg gray "click to rename")
+    - [x] Rename "Generate code" to "Export"
+    - [x] Cannot type spaces in the level name
+    - ~~[ ] Fix bug: going right off sliding platform sticks player to the platform for a bit~~
+- Major
+    - [x] "Saved levels" list can get cluttered. Separate list of saved levels from the level editor, and instead create a separate screen / tab for saved levels. Saving should take user to the saved levels screen
+- Features
+    - [x] Add option to save & name levels created (in local storage), standardize to base 64 export & import
+    - [x] Create menu screen (eg something like play > official levels & saved levels, editor)
+- Outdated
+    - [ ] Clicking different levels under "saved levels" should highlight the currently loaded saved level
