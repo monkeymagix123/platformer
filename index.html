@@ -10,7 +10,7 @@
   <body>
     <main class="shell">
       <header class="topbar">
-        <a class="brand" href="#" aria-label="Skybound home"><span class="brand-mark" aria-hidden="true"></span><span>SKYBOUND</span></a>
+        <a class="brand" id="home-button" href="#" aria-label="Open main menu"><span class="brand-mark" aria-hidden="true"></span><span>SKYBOUND</span></a>
         <div class="top-actions">
           <button class="editor-launch" id="editor-button"><span>＋</span> LEVEL EDITOR</button>
           <button class="icon-button" id="sound-button" aria-label="Toggle sound" title="Toggle sound"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6.5 9H3v6h3.5l4.5 4V5Zm4.3 3.2a5.3 5.3 0 0 1 0 7.6M18 5.5a9 9 0 0 1 0 13"/></svg></button>
@@ -20,6 +20,35 @@
 
       <section class="game-card" aria-label="Skybound game">
         <div id="game-container"></div>
+        <section class="menu-overlay" id="menu-overlay">
+          <div class="menu-screen active" id="menu-home">
+            <div class="micro-label">PIXEL SYSTEMS // SKYBOUND</div>
+            <h1>CHOOSE<br><em>YOUR PATH</em></h1>
+            <div class="menu-actions">
+              <button data-menu-target="official"><span>01</span><b>PLAY</b><small>Official levels</small><i>→</i></button>
+              <button data-menu-target="saved"><span>02</span><b>SAVED LEVELS</b><small>Your local creations</small><i>→</i></button>
+              <button id="menu-editor"><span>03</span><b>LEVEL EDITOR</b><small>Build a new sector</small><i>＋</i></button>
+            </div>
+          </div>
+          <div class="menu-screen" id="menu-official">
+            <button class="menu-back" data-menu-target="home">← MAIN MENU</button>
+            <div class="micro-label">PLAY // OFFICIAL LEVELS</div>
+            <h2>OFFICIAL<br>SECTORS</h2>
+            <div class="level-card official-card">
+              <span class="level-card-number">01</span>
+              <div><b>THE FIRST ASCENT</b><small>Cross the fractured skyline and reach the beacon.</small></div>
+              <button id="play-official">PLAY →</button>
+            </div>
+          </div>
+          <div class="menu-screen" id="menu-saved">
+            <button class="menu-back" data-menu-target="home">← MAIN MENU</button>
+            <div class="saved-heading">
+              <div><div class="micro-label">PLAY // LOCAL LIBRARY</div><h2>SAVED<br>LEVELS</h2></div>
+              <button class="menu-new-level" id="saved-new-level">＋ NEW LEVEL</button>
+            </div>
+            <div class="menu-level-list" id="menu-saved-list"></div>
+          </div>
+        </section>
         <div class="hud">
           <div class="hud-group"><div class="eyebrow">SECTOR</div><div class="hud-value"><span>01</span><span class="hud-muted"> / 01</span></div></div>
           <div class="hud-group hud-center"><div class="eyebrow">SHARDS</div><div class="hud-value shard-value"><span class="shard-icon"></span><span id="coin-count">0</span><span class="hud-muted"> / <span id="shard-total">12</span></span></div></div>
@@ -53,11 +82,12 @@
       <header class="editor-header">
         <div>
           <span class="micro-label">SKYBOUND // LEVEL LAB</span>
-          <input id="level-name" class="level-name" value="The First Ascent" aria-label="Level name" />
+          <label class="level-name-wrap"><input id="level-name" class="level-name" value="The First Ascent" aria-label="Level name" /><small>CLICK TITLE TO RENAME</small></label>
         </div>
         <div class="editor-header-actions">
           <button class="editor-secondary" id="editor-undo">↶ UNDO</button>
           <button class="editor-secondary" id="editor-reset">RESET</button>
+          <button class="editor-secondary save-editor-level" id="save-level">SAVE</button>
           <button class="editor-primary" id="editor-play">▶ PLAY TEST</button>
           <button class="editor-close" id="close-editor" aria-label="Close editor">×</button>
         </div>
@@ -99,18 +129,11 @@
         </div>
 
         <aside class="editor-data">
-          <div class="editor-section-label">SAVED LEVELS</div>
-          <div class="library-actions">
-            <button class="save-level" id="save-level">SAVE LEVEL</button>
-            <button id="new-level">NEW</button>
-          </div>
-          <div class="saved-level-list" id="saved-level-list"></div>
-
-          <div class="editor-section-label share-label">BASE64 SHARING</div>
+          <div class="editor-section-label">BASE64 SHARING</div>
           <p>Generate a compact level code to share, or paste one below to import it.</p>
           <textarea id="level-data" spellcheck="false" placeholder="Paste a Base64 level code…"></textarea>
           <div class="editor-data-grid">
-            <button id="generate-code">GENERATE CODE</button>
+            <button id="generate-code">EXPORT</button>
             <button id="copy-level">COPY</button>
           </div>
           <button class="editor-import" id="import-level">IMPORT BASE64 CODE</button>

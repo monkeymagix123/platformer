@@ -11,7 +11,6 @@ import {
   importLevel,
 } from './level-format';
 import {
-  deleteSavedLevel,
   listSavedLevels,
   saveLevel,
 } from './level-storage';
@@ -52,6 +51,7 @@ export class LevelEditor {
   constructor(
     private readonly playLevel: (level: LevelDefinition) => void,
     private readonly onClose: () => void,
+    private readonly onSaved: (savedLevelId: string) => void,
   ) {
     this.bindControls();
     this.resizeCanvas();
@@ -73,7 +73,6 @@ export class LevelEditor {
     this.modal.classList.add('open');
     this.modal.setAttribute('aria-hidden', 'false');
     this.resizeCanvas();
-    this.renderSavedLevels();
     this.render();
   }
 
@@ -132,7 +131,6 @@ export class LevelEditor {
     });
 
     select('#save-level').addEventListener('click', () => this.saveToLibrary());
-    select('#new-level').addEventListener('click', () => this.newLevel());
     select('#generate-code').addEventListener('click', () => this.exportCode());
     select('#copy-level').addEventListener('click', () => void this.copyExport());
     select('#import-level').addEventListener('click', () => this.import());
@@ -428,83 +426,13 @@ export class LevelEditor {
       this.syncName();
       const saved = saveLevel(this.level, this.savedLevelId);
       this.savedLevelId = saved.id;
-      this.renderSavedLevels();
-      this.showMessage(`“${saved.name}” saved locally.`);
+      this.onSaved(saved.id);
+      this.close();
     } catch {
       this.showMessage('Unable to save. Browser storage may be full or disabled.', true);
     }
   }
 
-  private newLevel(): void {
-    this.saveHistory();
-    this.level = cloneLevel(DEFAULT_LEVEL);
-    this.level.name = 'Untitled Level';
-    this.savedLevelId = null;
-    this.nameInput.value = this.level.name;
-    this.render();
-    this.showMessage('New unsaved level created.');
-  }
-
-  private loadFromLibrary(id: string): void {
-    const saved = listSavedLevels().find((item) => item.id === id);
-    if (!saved) {
-      this.renderSavedLevels();
-      this.showMessage('That saved level could not be found.', true);
-      return;
-    }
-
-    this.saveHistory();
-    this.level = cloneLevel(saved.level);
-    this.savedLevelId = saved.id;
-    this.nameInput.value = saved.name;
-    this.render();
-    this.showMessage(`“${saved.name}” loaded.`);
-  }
-
-  private removeFromLibrary(id: string): void {
-    deleteSavedLevel(id);
-    if (this.savedLevelId === id) this.savedLevelId = null;
-    this.renderSavedLevels();
-    this.showMessage('Saved level deleted.');
-  }
-
-  private renderSavedLevels(): void {
-    const list = select('#saved-level-list');
-    const savedLevels = listSavedLevels();
-    list.replaceChildren();
-
-    if (savedLevels.length === 0) {
-      const empty = document.createElement('p');
-      empty.className = 'saved-level-empty';
-      empty.textContent = 'No saved levels yet.';
-      list.appendChild(empty);
-      return;
-    }
-
-    for (const saved of savedLevels) {
-      const row = document.createElement('div');
-      row.className = 'saved-level-row';
-      row.classList.toggle('active', saved.id === this.savedLevelId);
-
-      const loadButton = document.createElement('button');
-      loadButton.className = 'saved-level-load';
-      const name = document.createElement('b');
-      name.textContent = saved.name;
-      const date = document.createElement('small');
-      date.textContent = formatSavedDate(saved.updatedAt);
-      loadButton.append(name, date);
-      loadButton.addEventListener('click', () => this.loadFromLibrary(saved.id));
-
-      const deleteButton = document.createElement('button');
-      deleteButton.className = 'saved-level-delete';
-      deleteButton.textContent = '×';
-      deleteButton.setAttribute('aria-label', `Delete ${saved.name}`);
-      deleteButton.addEventListener('click', () => this.removeFromLibrary(saved.id));
-
-      row.append(loadButton, deleteButton);
-      list.appendChild(row);
-    }
-  }
 
   private syncName(): void {
     this.level.name = this.nameInput.value.trim() || 'Untitled Level';
@@ -817,15 +745,6 @@ function directionIcon(direction: ArrowTrap['direction']): string {
 
 function clamp(value: number, minimum: number, maximum: number): number {
   return Math.max(minimum, Math.min(maximum, value));
-}
-
-function formatSavedDate(timestamp: number): string {
-  return new Intl.DateTimeFormat(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(timestamp);
 }
 
 function select(selector: string): HTMLElement {

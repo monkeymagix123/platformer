@@ -15,6 +15,7 @@ import {
 } from './graphics';
 import { cloneLevel } from './level-format';
 import { MechanicsSystem } from './mechanics';
+import { MenuController } from './menu';
 import './styles.css';
 
 type PlayerState = {
@@ -662,16 +663,55 @@ async function main(): Promise<void> {
   await game.initialize(host);
 
   let resumeAfterEditor = false;
+  let returnToMenuAfterEditor = false;
+  let menu: MenuController;
   const editor = new LevelEditor(
-    (level) => game.playLevel(level),
-    () => {
-      if (resumeAfterEditor) game.resume();
+    (level) => {
       resumeAfterEditor = false;
+      returnToMenuAfterEditor = false;
+      game.playLevel(level);
+    },
+    () => {
+      if (returnToMenuAfterEditor) menu.showSavedLevels();
+      else if (resumeAfterEditor) game.resume();
+      resumeAfterEditor = false;
+      returnToMenuAfterEditor = false;
+    },
+    () => {
+      resumeAfterEditor = false;
+      returnToMenuAfterEditor = false;
+      menu.showSavedLevels();
     },
   );
+
+  const openEditor = (
+    level: LevelDefinition,
+    resumeGame = false,
+    returnToMenu = false,
+  ): void => {
+    resumeAfterEditor = resumeGame;
+    returnToMenuAfterEditor = returnToMenu;
+    editor.open(level);
+  };
+
+  menu = new MenuController({
+    playOfficial: () => game.playLevel(cloneLevel(DEFAULT_LEVEL)),
+    playSaved: (level) => game.playLevel(level),
+    editSaved: (level) => openEditor(level, false, true),
+    createLevel: () => {
+      const level = cloneLevel(DEFAULT_LEVEL);
+      level.name = 'Untitled Level';
+      openEditor(level, false, true);
+    },
+  });
+
   select('#editor-button').addEventListener('click', () => {
-    resumeAfterEditor = game.pause();
-    editor.open(game.getLevel());
+    openEditor(game.getLevel(), game.pause());
+  });
+  select('#home-button').addEventListener('click', (event) => {
+    event.preventDefault();
+    game.pause();
+    menu.open();
   });
 }
 
