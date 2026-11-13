@@ -282,7 +282,7 @@
 
 #level-data {
   width: 100%;
-  height: min(42vh, 360px);
+  height: min(25vh, 220px);
   padding: 12px;
   resize: vertical;
   border: 1px solid #29394b;
@@ -334,6 +334,92 @@
 .editor-message.error {
   border-color: #f06156;
   color: #e98982;
+}
+
+.library-actions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+}
+
+.library-actions button {
+  min-height: 38px;
+  padding: 8px 12px;
+}
+
+.library-actions .save-level {
+  border-color: rgba(201, 250, 73, 0.45);
+  color: var(--acid);
+}
+
+.saved-level-list {
+  max-height: 210px;
+  margin-top: 8px;
+  overflow-y: auto;
+  border-block: 1px solid var(--line);
+}
+
+.saved-level-empty {
+  margin: 0 !important;
+  padding: 18px 8px;
+  text-align: center;
+  color: #59687a !important;
+  font: 9px "DM Mono", monospace !important;
+}
+
+.saved-level-row {
+  display: grid;
+  grid-template-columns: 1fr 30px;
+  align-items: stretch;
+  border-bottom: 1px solid var(--line);
+}
+
+.saved-level-row.active {
+  background: rgba(201, 250, 73, 0.06);
+  box-shadow: inset 2px 0 var(--acid);
+}
+
+.saved-level-load,
+.saved-level-delete {
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.saved-level-load {
+  min-width: 0;
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  text-align: left;
+}
+
+.saved-level-load b {
+  max-width: 100%;
+  overflow: hidden;
+  color: #dce5df;
+  font: 500 10px "DM Mono", monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.saved-level-load small {
+  color: #667487;
+  font: 8px "DM Mono", monospace;
+}
+
+.saved-level-delete {
+  color: #718092;
+  font-size: 17px !important;
+}
+
+.saved-level-delete:hover {
+  color: #f06156 !important;
+}
+
+.share-label {
+  margin-top: 22px;
 }
 
 @media (max-width: 900px) {

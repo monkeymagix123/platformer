@@ -99,17 +99,21 @@
         </div>
 
         <aside class="editor-data">
-          <div class="editor-section-label">IMPORT / EXPORT</div>
-          <p>Paste either readable JSON or a compact Base64 level code.</p>
-          <textarea id="level-data" spellcheck="false" placeholder="Level data appears here…"></textarea>
-          <div class="editor-data-grid">
-            <button id="export-json">EXPORT JSON</button>
-            <button id="export-base64">EXPORT BASE64</button>
-            <button id="copy-level">COPY</button>
-            <button id="download-level">DOWNLOAD</button>
+          <div class="editor-section-label">SAVED LEVELS</div>
+          <div class="library-actions">
+            <button class="save-level" id="save-level">SAVE LEVEL</button>
+            <button id="new-level">NEW</button>
           </div>
-          <button class="editor-import" id="import-level">IMPORT FROM TEXT</button>
-          <label class="editor-file">IMPORT JSON FILE<input id="level-file" type="file" accept="application/json,.json" /></label>
+          <div class="saved-level-list" id="saved-level-list"></div>
+
+          <div class="editor-section-label share-label">BASE64 SHARING</div>
+          <p>Generate a compact level code to share, or paste one below to import it.</p>
+          <textarea id="level-data" spellcheck="false" placeholder="Paste a Base64 level code…"></textarea>
+          <div class="editor-data-grid">
+            <button id="generate-code">GENERATE CODE</button>
+            <button id="copy-level">COPY</button>
+          </div>
+          <button class="editor-import" id="import-level">IMPORT BASE64 CODE</button>
           <p class="editor-message" id="editor-message" aria-live="polite">Ready to build.</p>
         </aside>
       </div>

@@ -8,9 +8,13 @@ import {
 import {
   cloneLevel,
   exportLevelBase64,
-  exportLevelJson,
   importLevel,
 } from './level-format';
+import {
+  deleteSavedLevel,
+  listSavedLevels,
+  saveLevel,
+} from './level-storage';
 
 type EditorTool =
   | 'platform'
@@ -36,6 +40,7 @@ export class LevelEditor {
   private hoverPoint: Point | null = null;
   private arrowDirection: ArrowTrap['direction'] = 'right';
   private movingSpeed = 120;
+  private savedLevelId: string | null = null;
 
   private readonly modal = select('#editor-modal');
   private readonly canvas = selectCanvas('#editor-canvas');
@@ -55,6 +60,11 @@ export class LevelEditor {
 
   open(level: LevelDefinition): void {
     this.level = cloneLevel(level);
+    const currentCode = exportLevelBase64(this.level);
+    this.savedLevelId =
+      listSavedLevels().find(
+        (saved) => exportLevelBase64(saved.level) === currentCode,
+      )?.id ?? null;
     this.history = [];
     this.pendingMovingPlatform = null;
     this.pendingMovingTarget = null;
@@ -63,6 +73,7 @@ export class LevelEditor {
     this.modal.classList.add('open');
     this.modal.setAttribute('aria-hidden', 'false');
     this.resizeCanvas();
+    this.renderSavedLevels();
     this.render();
   }
 
@@ -108,6 +119,7 @@ export class LevelEditor {
     select('#editor-reset').addEventListener('click', () => {
       this.saveHistory();
       this.level = cloneLevel(DEFAULT_LEVEL);
+      this.savedLevelId = null;
       this.nameInput.value = this.level.name;
       this.render();
       this.showMessage('Default level restored.');
@@ -119,14 +131,11 @@ export class LevelEditor {
       this.close();
     });
 
-    select('#export-json').addEventListener('click', () => this.export('json'));
-    select('#export-base64').addEventListener('click', () => this.export('base64'));
+    select('#save-level').addEventListener('click', () => this.saveToLibrary());
+    select('#new-level').addEventListener('click', () => this.newLevel());
+    select('#generate-code').addEventListener('click', () => this.exportCode());
     select('#copy-level').addEventListener('click', () => void this.copyExport());
-    select('#download-level').addEventListener('click', () => this.downloadJson());
     select('#import-level').addEventListener('click', () => this.import());
-    selectInput('#level-file').addEventListener('change', (event) =>
-      void this.importFile(event),
-    );
     this.nameInput.addEventListener('change', () => this.syncName());
 
     this.canvas.addEventListener('pointerdown', (event) => this.pointerDown(event));
@@ -382,16 +391,14 @@ export class LevelEditor {
     this.render();
   }
 
-  private export(format: 'json' | 'base64'): void {
+  private exportCode(): void {
     this.syncName();
-    this.dataField.value = format === 'json'
-      ? exportLevelJson(this.level)
-      : exportLevelBase64(this.level);
-    this.showMessage(`${format === 'json' ? 'JSON' : 'Base64'} export ready.`);
+    this.dataField.value = exportLevelBase64(this.level);
+    this.showMessage('Base64 level code ready.');
   }
 
   private async copyExport(): Promise<void> {
-    if (!this.dataField.value.trim()) this.export('json');
+    if (!this.dataField.value.trim()) this.exportCode();
 
     try {
       await navigator.clipboard.writeText(this.dataField.value);
@@ -402,24 +409,12 @@ export class LevelEditor {
     }
   }
 
-  private downloadJson(): void {
-    this.syncName();
-    const blob = new Blob([exportLevelJson(this.level)], {
-      type: 'application/json',
-    });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `${slugify(this.level.name)}.skybound.json`;
-    link.click();
-    URL.revokeObjectURL(link.href);
-    this.showMessage('JSON file downloaded.');
-  }
-
   private import(): void {
     try {
       const imported = importLevel(this.dataField.value);
       this.saveHistory();
       this.level = imported;
+      this.savedLevelId = null;
       this.nameInput.value = this.level.name;
       this.render();
       this.showMessage('Level imported successfully.');
@@ -428,14 +423,87 @@ export class LevelEditor {
     }
   }
 
-  private async importFile(event: Event): Promise<void> {
-    const input = event.currentTarget as HTMLInputElement;
-    const file = input.files?.[0];
-    if (!file) return;
+  private saveToLibrary(): void {
+    try {
+      this.syncName();
+      const saved = saveLevel(this.level, this.savedLevelId);
+      this.savedLevelId = saved.id;
+      this.renderSavedLevels();
+      this.showMessage(`“${saved.name}” saved locally.`);
+    } catch {
+      this.showMessage('Unable to save. Browser storage may be full or disabled.', true);
+    }
+  }
 
-    this.dataField.value = await file.text();
-    this.import();
-    input.value = '';
+  private newLevel(): void {
+    this.saveHistory();
+    this.level = cloneLevel(DEFAULT_LEVEL);
+    this.level.name = 'Untitled Level';
+    this.savedLevelId = null;
+    this.nameInput.value = this.level.name;
+    this.render();
+    this.showMessage('New unsaved level created.');
+  }
+
+  private loadFromLibrary(id: string): void {
+    const saved = listSavedLevels().find((item) => item.id === id);
+    if (!saved) {
+      this.renderSavedLevels();
+      this.showMessage('That saved level could not be found.', true);
+      return;
+    }
+
+    this.saveHistory();
+    this.level = cloneLevel(saved.level);
+    this.savedLevelId = saved.id;
+    this.nameInput.value = saved.name;
+    this.render();
+    this.showMessage(`“${saved.name}” loaded.`);
+  }
+
+  private removeFromLibrary(id: string): void {
+    deleteSavedLevel(id);
+    if (this.savedLevelId === id) this.savedLevelId = null;
+    this.renderSavedLevels();
+    this.showMessage('Saved level deleted.');
+  }
+
+  private renderSavedLevels(): void {
+    const list = select('#saved-level-list');
+    const savedLevels = listSavedLevels();
+    list.replaceChildren();
+
+    if (savedLevels.length === 0) {
+      const empty = document.createElement('p');
+      empty.className = 'saved-level-empty';
+      empty.textContent = 'No saved levels yet.';
+      list.appendChild(empty);
+      return;
+    }
+
+    for (const saved of savedLevels) {
+      const row = document.createElement('div');
+      row.className = 'saved-level-row';
+      row.classList.toggle('active', saved.id === this.savedLevelId);
+
+      const loadButton = document.createElement('button');
+      loadButton.className = 'saved-level-load';
+      const name = document.createElement('b');
+      name.textContent = saved.name;
+      const date = document.createElement('small');
+      date.textContent = formatSavedDate(saved.updatedAt);
+      loadButton.append(name, date);
+      loadButton.addEventListener('click', () => this.loadFromLibrary(saved.id));
+
+      const deleteButton = document.createElement('button');
+      deleteButton.className = 'saved-level-delete';
+      deleteButton.textContent = '×';
+      deleteButton.setAttribute('aria-label', `Delete ${saved.name}`);
+      deleteButton.addEventListener('click', () => this.removeFromLibrary(saved.id));
+
+      row.append(loadButton, deleteButton);
+      list.appendChild(row);
+    }
   }
 
   private syncName(): void {
@@ -751,8 +819,13 @@ function clamp(value: number, minimum: number, maximum: number): number {
   return Math.max(minimum, Math.min(maximum, value));
 }
 
-function slugify(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'level';
+function formatSavedDate(timestamp: number): string {
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(timestamp);
 }
 
 function select(selector: string): HTMLElement {

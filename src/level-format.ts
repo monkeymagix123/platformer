@@ -12,12 +12,8 @@ export function cloneLevel(level: LevelDefinition): LevelDefinition {
   return JSON.parse(JSON.stringify(level)) as LevelDefinition;
 }
 
-export function exportLevelJson(level: LevelDefinition): string {
-  return JSON.stringify(level, null, 2);
-}
-
 export function exportLevelBase64(level: LevelDefinition): string {
-  const bytes = new TextEncoder().encode(exportLevelJson(level));
+  const bytes = new TextEncoder().encode(JSON.stringify(level));
   let binary = '';
 
   for (const byte of bytes) binary += String.fromCharCode(byte);
@@ -26,10 +22,16 @@ export function exportLevelBase64(level: LevelDefinition): string {
 
 export function importLevel(source: string): LevelDefinition {
   const trimmed = source.trim();
-  if (!trimmed) throw new Error('Paste JSON or Base64 level data first.');
+  if (!trimmed) throw new Error('Paste a Base64 level code first.');
 
-  const json = trimmed.startsWith('{') ? trimmed : decodeBase64(trimmed);
-  return validateLevel(JSON.parse(json) as unknown);
+  let decoded: unknown;
+  try {
+    decoded = JSON.parse(decodeBase64(trimmed)) as unknown;
+  } catch {
+    throw new Error('The level code is not valid Base64.');
+  }
+
+  return validateLevel(decoded);
 }
 
 function decodeBase64(value: string): string {
@@ -38,7 +40,7 @@ function decodeBase64(value: string): string {
     const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
     return new TextDecoder().decode(bytes);
   } catch {
-    throw new Error('The value is neither valid JSON nor valid Base64.');
+    throw new Error('The level code is not valid Base64.');
   }
 }
 
