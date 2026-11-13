@@ -3,7 +3,7 @@
     - Minor
         - [x] Make it more obvious how to rename level name (eg gray "click to rename")
         - [x] Rename "Generate code" to "Export"
-        - [ ] Cannot type spaces in the level name
+        - [x] Cannot type spaces in the level name
     - Major
         - [x] "Saved levels" list can get cluttered. Separate list of saved levels from the level editor, and instead create a separate screen / tab for saved levels. Saving should take user to the saved levels screen
         - [x] Create menu screen (eg something like play > official levels & saved levels, editor)

@@ -235,6 +235,8 @@ export class LevelEditor {
   }
 
   private keyDown(event: KeyboardEvent): void {
+    if (isTextEntryTarget(event.target)) return;
+
     if (
       !this.modal.classList.contains('open') ||
       this.tool !== 'arrow' ||
@@ -773,4 +775,12 @@ function selectTextArea(selector: string): HTMLTextAreaElement {
 
 function setText(selector: string, text: string): void {
   select(selector).textContent = text;
+}
+
+function isTextEntryTarget(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    (target instanceof HTMLElement && target.isContentEditable)
+  );
 }

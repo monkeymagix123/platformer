@@ -524,6 +524,8 @@ class PlatformerGame {
 
   private bindKeyboardControls(): void {
     window.addEventListener('keydown', (event) => {
+      if (isTextEntryTarget(event.target)) return;
+
       if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'Space'].includes(event.code)) {
         event.preventDefault();
       }
@@ -534,6 +536,7 @@ class PlatformerGame {
     });
 
     window.addEventListener('keyup', (event) => {
+      if (isTextEntryTarget(event.target)) return;
       this.setKeyboardInput(event.code, false);
     });
   }
@@ -653,6 +656,14 @@ function selectInput(selector: string): HTMLInputElement {
 
 function setText(selector: string, value: string): void {
   select(selector).textContent = value;
+}
+
+function isTextEntryTarget(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    (target instanceof HTMLElement && target.isContentEditable)
+  );
 }
 
 async function main(): Promise<void> {
