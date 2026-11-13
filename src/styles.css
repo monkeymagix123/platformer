@@ -22,6 +22,18 @@
   color: #10170e;
 }
 
+.sound-slash {
+  display: none;
+}
+
+#sound-button.muted .sound-wave {
+  display: none;
+}
+
+#sound-button.muted .sound-slash {
+  display: block;
+}
+
 .menu-overlay {
   position: absolute;
   z-index: 9;

@@ -588,7 +588,12 @@ class PlatformerGame {
 
     select('#sound-button').addEventListener('click', (event) => {
       const isEnabled = this.sound.toggle();
-      (event.currentTarget as HTMLElement).style.opacity = isEnabled ? '1' : '0.35';
+      const button = event.currentTarget as HTMLButtonElement;
+      button.classList.toggle('muted', !isEnabled);
+      button.style.opacity = isEnabled ? '1' : '0.62';
+      button.setAttribute('aria-pressed', String(!isEnabled));
+      button.setAttribute('aria-label', isEnabled ? 'Mute sound' : 'Unmute sound');
+      button.title = isEnabled ? 'Mute sound' : 'Unmute sound';
     });
 
     const drawer = select('#settings-drawer');
