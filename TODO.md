@@ -5,6 +5,7 @@ Gameplay
   - [ ] new traps
     - [ ] lasers
   - [ ] new blocks
+  - [ ] new official levels (low priority)
 - Major
 - Minor
 - Minor
