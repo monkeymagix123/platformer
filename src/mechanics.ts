@@ -38,6 +38,17 @@ type MechanicsEvents = {
   crumbleWarning?: () => void;
   crumbleCollapse?: () => void;
   crumbleReform?: () => void;
+  arrowImpact?: (hitPlayer: boolean) => void;
+};
+
+type ImpactParticle = {
+  sprite: Graphics;
+  velocityX: number;
+  velocityY: number;
+  rotationSpeed: number;
+  life: number;
+  maxLife: number;
+  expanding: boolean;
 };
 
 type TrapRuntime = {
@@ -61,6 +72,7 @@ export class MechanicsSystem {
   private readonly traps: TrapRuntime[] = [];
   private readonly arrows: ArrowRuntime[] = [];
   private readonly debris: CrumbleDebris[] = [];
+  private readonly impactParticles: ImpactParticle[] = [];
 
   constructor(
     private readonly level: LevelDefinition,
@@ -75,6 +87,7 @@ export class MechanicsSystem {
     this.updateMovingPlatforms(deltaTime);
     this.updateCrumblePlatforms(deltaTime);
     this.updateArrowTraps(deltaTime);
+    this.updateImpactParticles(deltaTime);
   }
 
   reset(): void {
@@ -97,6 +110,7 @@ export class MechanicsSystem {
     }
 
     this.clearDebris();
+    this.clearImpactParticles();
 
     for (const trap of this.traps) trap.timer = trap.definition.interval * 0.55;
     for (const arrow of this.arrows) arrow.sprite.destroy();
@@ -138,7 +152,9 @@ export class MechanicsSystem {
     if (hitIndex < 0) return false;
 
     const [arrow] = this.arrows.splice(hitIndex, 1);
+    this.spawnArrowImpact(arrow, true);
     arrow.sprite.destroy();
+    this.events.arrowImpact?.(true);
     return true;
   }
 
@@ -397,6 +413,10 @@ export class MechanicsSystem {
         arrow.y < -50 ||
         arrow.y > this.level.world.height + 50
       ) {
+        if (hitPlatform) {
+          this.spawnArrowImpact(arrow, false);
+          this.events.arrowImpact?.(false);
+        }
         arrow.sprite.destroy();
         this.arrows.splice(index, 1);
       }
@@ -421,6 +441,90 @@ export class MechanicsSystem {
       velocityY: vector.y * trap.speed,
       sprite,
     });
+  }
+
+  private spawnArrowImpact(arrow: ArrowRuntime, hitPlayer: boolean): void {
+    const speed = Math.max(1, Math.hypot(arrow.velocityX, arrow.velocityY));
+    const directionX = arrow.velocityX / speed;
+    const directionY = arrow.velocityY / speed;
+    const perpendicularX = -directionY;
+    const perpendicularY = directionX;
+    const particleCount = hitPlayer ? 7 : 5;
+
+    for (let index = 0; index < particleCount; index += 1) {
+      const isArrowFragment = index % 2 === 0;
+      const size = isArrowFragment ? 4 : 2.5;
+      const sprite = new Graphics()
+        .rect(-size / 2, -size / 2, size, isArrowFragment ? 2 : size)
+        .fill(
+          isArrowFragment
+            ? 0xe8ded1
+            : hitPlayer
+              ? COLORS.acid
+              : 0x71889d,
+        );
+      sprite.position.set(arrow.x, arrow.y);
+      this.layer.addChild(sprite);
+
+      const backwardSpeed = 45 + Math.random() * 85;
+      const spread = (Math.random() - 0.5) * 120;
+      const life = 0.16 + Math.random() * 0.14;
+      this.impactParticles.push({
+        sprite,
+        velocityX: -directionX * backwardSpeed + perpendicularX * spread,
+        velocityY: -directionY * backwardSpeed + perpendicularY * spread,
+        rotationSpeed: (Math.random() - 0.5) * 14,
+        life,
+        maxLife: life,
+        expanding: false,
+      });
+    }
+
+    const ring = new Graphics()
+      .circle(0, 0, hitPlayer ? 8 : 6)
+      .stroke({
+        color: hitPlayer ? COLORS.acid : 0xc5d3dc,
+        width: 1.5,
+        alpha: 0.8,
+      });
+    ring.position.set(arrow.x, arrow.y);
+    ring.scale.set(0.35);
+    this.layer.addChild(ring);
+    this.impactParticles.push({
+      sprite: ring,
+      velocityX: 0,
+      velocityY: 0,
+      rotationSpeed: 0,
+      life: 0.18,
+      maxLife: 0.18,
+      expanding: true,
+    });
+  }
+
+  private updateImpactParticles(deltaTime: number): void {
+    for (let index = this.impactParticles.length - 1; index >= 0; index -= 1) {
+      const particle = this.impactParticles[index];
+      particle.life -= deltaTime;
+      particle.sprite.x += particle.velocityX * deltaTime;
+      particle.sprite.y += particle.velocityY * deltaTime;
+      particle.sprite.rotation += particle.rotationSpeed * deltaTime;
+      particle.sprite.alpha = Math.max(0, particle.life / particle.maxLife);
+
+      if (particle.expanding) {
+        const progress = 1 - particle.life / particle.maxLife;
+        particle.sprite.scale.set(0.35 + progress * 1.25);
+      }
+
+      if (particle.life <= 0) {
+        particle.sprite.destroy();
+        this.impactParticles.splice(index, 1);
+      }
+    }
+  }
+
+  private clearImpactParticles(): void {
+    for (const particle of this.impactParticles) particle.sprite.destroy();
+    this.impactParticles.length = 0;
   }
 }
 

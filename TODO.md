@@ -8,7 +8,7 @@ Gameplay
   - [ ] new official levels (low priority)
 - Major
 - Minor
-  - [ ] arrows should release particles when hit an object (eg a platform)
+  - [x] arrows release particles when collide with an object (eg a platform)
 - Outdated
 
 
