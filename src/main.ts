@@ -197,6 +197,7 @@ class PlatformerGame {
       crumbleWarning: () => this.sound.play(155, 0.07),
       crumbleCollapse: () => this.sound.play(82, 0.16),
       crumbleReform: () => this.sound.play(270, 0.08),
+      launcherFire: () => this.sound.play(360, 0.055),
       arrowImpact: (hitPlayer) =>
         this.sound.play(hitPlayer ? 105 : 190, hitPlayer ? 0.1 : 0.045),
     });

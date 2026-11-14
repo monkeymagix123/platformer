@@ -135,7 +135,7 @@ function readArrowDirection(value: unknown): ArrowTrap['direction'] {
   if (value === 'right' || value === 'down' || value === 'left' || value === 'up') {
     return value;
   }
-  throw new Error('Arrow direction must be right, down, left, or up.');
+  throw new Error('Launcher direction must be right, down, left, or up.');
 }
 
 function readWorld(value: unknown): LevelDefinition['world'] {

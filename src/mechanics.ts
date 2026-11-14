@@ -38,6 +38,7 @@ type MechanicsEvents = {
   crumbleWarning?: () => void;
   crumbleCollapse?: () => void;
   crumbleReform?: () => void;
+  launcherFire?: () => void;
   arrowImpact?: (hitPlayer: boolean) => void;
 };
 
@@ -54,6 +55,7 @@ type ImpactParticle = {
 type TrapRuntime = {
   definition: ArrowTrap;
   timer: number;
+  core: Graphics;
 };
 
 type ArrowRuntime = {
@@ -112,7 +114,11 @@ export class MechanicsSystem {
     this.clearDebris();
     this.clearImpactParticles();
 
-    for (const trap of this.traps) trap.timer = trap.definition.interval * 0.55;
+    for (const trap of this.traps) {
+      trap.timer = trap.definition.interval * 0.55;
+      trap.core.alpha = 0.3;
+      trap.core.scale.set(0.76);
+    }
     for (const arrow of this.arrows) arrow.sprite.destroy();
     this.arrows.length = 0;
   }
@@ -252,15 +258,34 @@ export class MechanicsSystem {
 
   private buildArrowTraps(): void {
     for (const definition of this.level.arrowTraps) {
-      const launcher = new Graphics()
-        .rect(-12, -14, 24, 28)
-        .fill(0x6b3440)
-        .poly([0, -7, 13, 0, 0, 7])
-        .fill(COLORS.danger);
+      const launcher = new Container();
+      const housing = new Graphics()
+        .poly([-14, -11, 6, -11, 14, 0, 6, 11, -14, 11, -10, 0])
+        .fill(0x243a50)
+        .stroke({ color: 0x58758c, width: 1.5 })
+        .moveTo(-7, -6)
+        .lineTo(-2, 0)
+        .lineTo(-7, 6)
+        .moveTo(-1, -6)
+        .lineTo(4, 0)
+        .lineTo(-1, 6)
+        .stroke({ color: COLORS.danger, width: 1.5, alpha: 0.72 });
+      const core = new Graphics()
+        .circle(8, 0, 4.5)
+        .fill(0xffd5cb)
+        .circle(8, 0, 8)
+        .stroke({ color: COLORS.danger, width: 1, alpha: 0.45 });
+      core.alpha = 0.3;
+      core.scale.set(0.76);
+      launcher.addChild(housing, core);
       launcher.position.set(definition.x, definition.y);
       launcher.rotation = directionAngle(definition.direction);
       this.layer.addChild(launcher);
-      this.traps.push({ definition, timer: definition.interval * 0.55 });
+      this.traps.push({
+        definition,
+        timer: definition.interval * 0.55,
+        core,
+      });
     }
   }
 
@@ -387,9 +412,17 @@ export class MechanicsSystem {
   private updateArrowTraps(deltaTime: number): void {
     for (const trap of this.traps) {
       trap.timer -= deltaTime;
+      const chargeWindow = Math.min(0.55, trap.definition.interval * 0.35);
+      const charge = Math.max(0, 1 - trap.timer / chargeWindow);
+      trap.core.alpha = 0.3 + charge * 0.7;
+      trap.core.scale.set(0.76 + charge * 0.28);
+
       if (trap.timer <= 0) {
         this.spawnArrow(trap.definition);
+        this.events.launcherFire?.();
         trap.timer += trap.definition.interval;
+        trap.core.alpha = 0.3;
+        trap.core.scale.set(0.76);
       }
     }
 
@@ -426,10 +459,16 @@ export class MechanicsSystem {
   private spawnArrow(trap: ArrowTrap): void {
     const vector = directionVector(trap.direction);
     const sprite = new Graphics()
-      .rect(-12, -2, 21, 4)
-      .fill(0xe8ded1)
-      .poly([9, -6, 16, 0, 9, 6])
-      .fill(COLORS.danger);
+      .moveTo(-14, 0)
+      .lineTo(9, 0)
+      .stroke({ color: COLORS.danger, width: 7, alpha: 0.2 })
+      .moveTo(-13, 0)
+      .lineTo(10, 0)
+      .stroke({ color: COLORS.danger, width: 3 })
+      .circle(10, 0, 3.5)
+      .fill(0xffe1d9)
+      .circle(10, 0, 6)
+      .stroke({ color: COLORS.danger, width: 1, alpha: 0.55 });
     sprite.rotation = directionAngle(trap.direction);
     sprite.position.set(trap.x + vector.x * 20, trap.y + vector.y * 20);
     this.layer.addChild(sprite);

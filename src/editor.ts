@@ -97,7 +97,7 @@ export class LevelEditor {
         );
         if (this.tool === 'arrow') {
           this.showMessage(
-            `Arrow launcher fires ${this.arrowDirection}. Press R to rotate.`,
+            `Pulse launcher fires ${this.arrowDirection}. Press R to rotate.`,
           );
         }
         this.render();
@@ -255,7 +255,7 @@ export class LevelEditor {
     const icon = document.querySelector<HTMLElement>('#arrow-tool-icon');
     if (icon) icon.textContent = directionIcon(this.arrowDirection);
     this.showMessage(
-      `Arrow launcher now fires ${this.arrowDirection}. Press R to rotate.`,
+      `Pulse launcher now fires ${this.arrowDirection}. Press R to rotate.`,
     );
     this.render();
   }
@@ -712,17 +712,39 @@ function drawArrowTrap(
   context.save();
   context.translate(x, y);
   context.rotate(angle[trap.direction]);
-  context.fillStyle = '#6b3440';
-  context.strokeStyle = '#a95865';
-  context.lineWidth = 1;
-  context.fillRect(-7, -8, 14, 16);
-  context.strokeRect(-7, -8, 14, 16);
+
   context.beginPath();
-  context.moveTo(-2, -5);
+  context.moveTo(-9, -7);
+  context.lineTo(4, -7);
   context.lineTo(9, 0);
-  context.lineTo(-2, 5);
+  context.lineTo(4, 7);
+  context.lineTo(-9, 7);
+  context.lineTo(-6, 0);
   context.closePath();
-  context.fillStyle = '#f06156';
+  context.fillStyle = '#243a50';
+  context.strokeStyle = '#58758c';
+  context.lineWidth = 1;
+  context.fill();
+  context.stroke();
+
+  context.beginPath();
+  context.moveTo(-5, -4);
+  context.lineTo(-1, 0);
+  context.lineTo(-5, 4);
+  context.moveTo(0, -4);
+  context.lineTo(4, 0);
+  context.lineTo(0, 4);
+  context.strokeStyle = '#f06156';
+  context.lineWidth = 1.25;
+  context.stroke();
+
+  context.beginPath();
+  context.arc(6, 0, 4, 0, Math.PI * 2);
+  context.strokeStyle = 'rgba(240, 97, 86, 0.55)';
+  context.stroke();
+  context.beginPath();
+  context.arc(6, 0, 2.5, 0, Math.PI * 2);
+  context.fillStyle = '#ffd5cb';
   context.fill();
   context.restore();
 }
